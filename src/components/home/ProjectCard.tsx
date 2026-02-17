@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { Image, StyleSheet, TouchableOpacity, View } from 'react-native';
 import type { Project } from '../../types';
 import { SPACING } from '../../constants';
@@ -24,6 +24,11 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   accessibilityLabel,
 }) => {
   const { colors } = useAppTheme();
+  const [thumbFailed, setThumbFailed] = useState(false);
+
+  useEffect(() => {
+    setThumbFailed(false);
+  }, [project.thumbnailUri]);
 
   return (
     <TouchableOpacity
@@ -34,7 +39,25 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
       activeOpacity={0.9}>
       <GlassCard style={styles.card}>
         <View style={styles.row}>
-          <Image source={{ uri: project.thumbnailUri }} style={styles.thumb} resizeMode="cover" />
+          {project.thumbnailUri && !thumbFailed ? (
+            <Image
+              source={{ uri: project.thumbnailUri }}
+              style={styles.thumb}
+              resizeMode="cover"
+              onError={() => setThumbFailed(true)}
+            />
+          ) : (
+            <View
+              style={[
+                styles.thumb,
+                styles.thumbFallback,
+                { borderColor: colors.cardBorder, backgroundColor: `${colors.card}88` },
+              ]}>
+              <AppText variant="micro" color={colors.textMuted}>
+                {project.video.displayName}
+              </AppText>
+            </View>
+          )}
           <View style={styles.meta}>
             <AppText variant="bodyStrong" numberOfLines={1}>
               {project.name}
@@ -65,6 +88,12 @@ const styles = StyleSheet.create({
     width: 96,
     height: 72,
     borderRadius: 12,
+  },
+  thumbFallback: {
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
   },
   meta: {
     flex: 1,

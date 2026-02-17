@@ -108,6 +108,24 @@ jest.mock('react-native-image-picker', () => ({
   launchImageLibrary: jest.fn(async () => ({ assets: [] })),
 }));
 
+jest.mock('react-native-create-thumbnail', () => {
+  const createThumbnail = jest.fn(async ({ timeStamp = 0 }) => ({
+    path: `/tmp/blurio_thumb_${timeStamp}.jpg`,
+    size: 1024,
+    mime: 'image/jpeg',
+    width: 1280,
+    height: 720,
+  }));
+
+  return {
+    __esModule: true,
+    createThumbnail,
+    default: {
+      createThumbnail,
+    },
+  };
+});
+
 jest.mock('react-native-blur', () => ({
   BlurView: 'BlurView',
 }));

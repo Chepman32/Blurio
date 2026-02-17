@@ -1,10 +1,11 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   StyleSheet,
   TouchableOpacity,
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ArrowLeft, Share2 } from 'lucide-react-native';
 import Animated, {
   useAnimatedStyle,
@@ -44,6 +45,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Editor'>;
 
 export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
   const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const { tick, impact, warning } = useHaptics();
 
   const project = useSelectedProject();
@@ -68,6 +70,15 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
   const reorderTracks = useEditorStore(state => state.reorderTracks);
   const updateSelectedTrackValuesAtPlayhead = useEditorStore(
     state => state.updateSelectedTrackValuesAtPlayhead,
+  );
+  const updateSelectedTrackValuesLive = useEditorStore(
+    state => state.updateSelectedTrackValuesLive,
+  );
+  const beginTrackValueInteraction = useEditorStore(
+    state => state.beginTrackValueInteraction,
+  );
+  const endTrackValueInteraction = useEditorStore(
+    state => state.endTrackValueInteraction,
   );
   const setTrackBlendMode = useEditorStore(state => state.setTrackBlendMode);
   const addKeyframeAtPlayhead = useEditorStore(state => state.addKeyframeAtPlayhead);
@@ -166,13 +177,17 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   }, [project, tick, ui.playheadMs, ui.selectedTrackId]);
 
+  const handleBackground = useCallback(() => {
+    setPaused(true);
+  }, []);
+
+  const handleForeground = useCallback(() => {
+    setPaused(false);
+  }, []);
+
   useAppLifecycle({
-    onBackground: () => {
-      setPaused(true);
-    },
-    onForeground: () => {
-      setPaused(false);
-    },
+    onBackground: handleBackground,
+    onForeground: handleForeground,
   });
 
   const selectedTrack = useMemo(() => {
@@ -283,7 +298,14 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <GradientBackground>
-      <View style={styles.container}>
+      <View
+        style={[
+          styles.container,
+          {
+            paddingTop: insets.top + SPACING.sm,
+            paddingBottom: Math.max(insets.bottom + SPACING.xs, SPACING.md),
+          },
+        ]}>
         <View style={styles.header}>
           <TouchableOpacity
             accessibilityLabel={STRINGS.common.back}
@@ -318,7 +340,9 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
             showSafeAreaOverlay={ui.showSafeAreaOverlay}
             paused={paused}
             onSelectTrack={selectTrack}
-            onUpdateTrackValues={updateSelectedTrackValuesAtPlayhead}
+            onStartTrackInteraction={beginTrackValueInteraction}
+            onEndTrackInteraction={endTrackValueInteraction}
+            onUpdateTrackValues={updateSelectedTrackValuesLive}
             onCanvasTransformChange={setCanvasTransform}
             onLongPressTrack={() => setMarkerContext(null)}
           />
@@ -433,8 +457,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.xl,
-    paddingBottom: SPACING.md,
     gap: SPACING.sm,
   },
   emptyWrap: {

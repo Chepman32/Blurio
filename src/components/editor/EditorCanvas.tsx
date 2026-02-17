@@ -27,6 +27,8 @@ interface EditorCanvasProps {
   showSafeAreaOverlay: boolean;
   paused: boolean;
   onSelectTrack: (trackId: ID) => void;
+  onStartTrackInteraction: () => void;
+  onEndTrackInteraction: () => void;
   onUpdateTrackValues: (partial: Partial<RenderStateTrack['values']>) => void;
   onCanvasTransformChange: (zoom: number, panX: number, panY: number) => void;
   onLongPressTrack: () => void;
@@ -40,6 +42,8 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
   showSafeAreaOverlay,
   paused,
   onSelectTrack,
+  onStartTrackInteraction,
+  onEndTrackInteraction,
   onUpdateTrackValues,
   onCanvasTransformChange,
   onLongPressTrack,
@@ -66,9 +70,41 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
   const startCanvasZoom = useSharedValue(1);
   const startCanvasPanX = useSharedValue(0);
   const startCanvasPanY = useSharedValue(0);
+  const activeTrackInteractions = useSharedValue(0);
+  const snapVerticalShared = useSharedValue(false);
+  const snapHorizontalShared = useSharedValue(false);
 
   const updateCanvasTransform = (zoom: number, panX: number, panY: number) => {
     onCanvasTransformChange(zoom, panX, panY);
+  };
+
+  const beginTrackInteraction = () => {
+    onStartTrackInteraction();
+  };
+
+  const endTrackInteraction = () => {
+    onEndTrackInteraction();
+  };
+
+  const beginTrackInteractionWorklet = () => {
+    'worklet';
+    if (activeTrackInteractions.value === 0) {
+      runOnJS(beginTrackInteraction)();
+    }
+    activeTrackInteractions.value += 1;
+  };
+
+  const endTrackInteractionWorklet = () => {
+    'worklet';
+    if (activeTrackInteractions.value <= 0) {
+      activeTrackInteractions.value = 0;
+      return;
+    }
+
+    activeTrackInteractions.value -= 1;
+    if (activeTrackInteractions.value === 0) {
+      runOnJS(endTrackInteraction)();
+    }
   };
 
   const regionPan = Gesture.Pan()
@@ -77,6 +113,7 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
       if (!selectedTrack) {
         return;
       }
+      beginTrackInteractionWorklet();
       moveStartX.value = selectedTrack.values.x;
       moveStartY.value = selectedTrack.values.y;
     })
@@ -104,13 +141,26 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
         y = 0.5 - selectedTrack.values.height / 2;
       }
 
-      runOnJS(setSnapVertical)(snapX);
-      runOnJS(setSnapHorizontal)(snapY);
+      if (snapVerticalShared.value !== snapX) {
+        snapVerticalShared.value = snapX;
+        runOnJS(setSnapVertical)(snapX);
+      }
+      if (snapHorizontalShared.value !== snapY) {
+        snapHorizontalShared.value = snapY;
+        runOnJS(setSnapHorizontal)(snapY);
+      }
       runOnJS(onUpdateTrackValues)({ x, y });
     })
-    .onEnd(() => {
-      runOnJS(setSnapVertical)(false);
-      runOnJS(setSnapHorizontal)(false);
+    .onFinalize(() => {
+      if (snapVerticalShared.value) {
+        snapVerticalShared.value = false;
+        runOnJS(setSnapVertical)(false);
+      }
+      if (snapHorizontalShared.value) {
+        snapHorizontalShared.value = false;
+        runOnJS(setSnapHorizontal)(false);
+      }
+      endTrackInteractionWorklet();
     });
 
   const pinch = Gesture.Pinch()
@@ -119,6 +169,7 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
         return;
       }
 
+      beginTrackInteractionWorklet();
       startWidth.value = selectedTrack.values.width;
       startHeight.value = selectedTrack.values.height;
     })
@@ -130,6 +181,9 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
       const width = clamp(startWidth.value * event.scale, 0.08, 0.95);
       const height = clamp(startHeight.value * event.scale, 0.08, 0.95);
       runOnJS(onUpdateTrackValues)({ width, height });
+    })
+    .onFinalize(() => {
+      endTrackInteractionWorklet();
     });
 
   const rotate = Gesture.Rotation()
@@ -137,6 +191,7 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
       if (!selectedTrack) {
         return;
       }
+      beginTrackInteractionWorklet();
       startRotation.value = selectedTrack.values.rotation;
     })
     .onUpdate(event => {
@@ -146,6 +201,9 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
 
       const deg = startRotation.value + (event.rotation * 180) / Math.PI;
       runOnJS(onUpdateTrackValues)({ rotation: deg });
+    })
+    .onFinalize(() => {
+      endTrackInteractionWorklet();
     });
 
   const twoFingerPan = Gesture.Pan()
@@ -218,7 +276,15 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
 
   const onLayout = (event: LayoutChangeEvent) => {
     const next = event.nativeEvent.layout;
-    setLayout({ width: Math.max(next.width, 1), height: Math.max(next.height, 1) });
+    const width = Math.max(next.width, 1);
+    const height = Math.max(next.height, 1);
+
+    setLayout(current =>
+      Math.abs(current.width - width) < 0.5 &&
+      Math.abs(current.height - height) < 0.5
+        ? current
+        : { width, height },
+    );
   };
 
   return (
@@ -238,10 +304,18 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
                 return null;
               }
 
-              const width = track.values.width * layout.width;
-              const height = track.values.height * layout.height;
-              const left = track.values.x * layout.width;
-              const top = track.values.y * layout.height;
+              const width = Math.max(track.values.width * layout.width, 24);
+              const height = Math.max(track.values.height * layout.height, 24);
+              const left = clamp(
+                track.values.x * layout.width,
+                0,
+                Math.max(0, layout.width - width),
+              );
+              const top = clamp(
+                track.values.y * layout.height,
+                0,
+                Math.max(0, layout.height - height),
+              );
 
               return (
                 <Pressable
@@ -259,8 +333,8 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
                   <RegionOverlay
                     track={track}
                     selected={selectedTrackId === track.id}
-                    canvasWidth={layout.width}
-                    canvasHeight={layout.height}
+                    width={width}
+                    height={height}
                   />
                 </Pressable>
               );

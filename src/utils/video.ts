@@ -1,5 +1,6 @@
 import RNFS from 'react-native-fs';
 import type { Asset } from 'react-native-image-picker';
+import { createThumbnail } from 'react-native-create-thumbnail';
 import {
   MIN_FREE_SPACE_FOR_EXPORT_BYTES,
   FOUR_K_HEIGHT,
@@ -19,8 +20,20 @@ const estimateBitrate = (asset: Asset): number => {
   return Math.round((size * 8 * 1000) / durationMs);
 };
 
-const generateThumbnailUris = (uri: string, count = 14): string[] =>
-  Array.from({ length: count }, (_, index) => `${uri}#frame=${index}`);
+const toFileUri = (path: string): string => {
+  if (path.startsWith('file://')) {
+    return path;
+  }
+
+  if (path.startsWith('/')) {
+    return `file://${path}`;
+  }
+
+  return path;
+};
+
+const normalizeThumbnailPath = (path: string): string =>
+  path.startsWith('file://') ? path : `file://${path}`;
 
 export const isICloudOnlyAsset = (asset: Asset): boolean => {
   const uri = asset.uri ?? '';
@@ -41,7 +54,7 @@ export const createVideoMetaFromAsset = (asset: Asset): VideoMeta | null => {
   return {
     id: createId('video'),
     assetUri: asset.uri,
-    localUri: asset.originalPath ? `file://${asset.originalPath}` : asset.uri,
+    localUri: asset.originalPath ? toFileUri(asset.originalPath) : asset.uri,
     displayName: asset.fileName ?? `Video ${new Date().toLocaleTimeString()}`,
     durationMs,
     width,
@@ -57,8 +70,39 @@ export const createVideoMetaFromAsset = (asset: Asset): VideoMeta | null => {
     unavailable: false,
     corrupted: false,
     unsupportedCodec: isCodecUnsupported(codec),
-    thumbnailUris: generateThumbnailUris(asset.uri),
+    thumbnailUris: [],
   };
+};
+
+export const generateVideoThumbnails = async (
+  sourceUri: string,
+  durationMs: number,
+  count = 12,
+): Promise<string[]> => {
+  const thumbnails: string[] = [];
+  const boundedCount = Math.max(1, Math.min(count, 20));
+  const safeDurationMs = Math.max(durationMs, 1);
+  const stepMs = safeDurationMs / (boundedCount + 1);
+
+  for (let index = 0; index < boundedCount; index += 1) {
+    try {
+      const frameTimeMs = Math.round(stepMs * (index + 1));
+      const thumbnailSourceUrl = sourceUri.startsWith('file://')
+        ? sourceUri.replace('file://', '')
+        : sourceUri;
+
+      const result = await createThumbnail({
+        url: thumbnailSourceUrl,
+        timeStamp: frameTimeMs,
+        cacheName: `blurio_thumb_${Date.now()}_${index}`,
+      });
+      thumbnails.push(normalizeThumbnailPath(result.path));
+    } catch {
+      // ignore failed frame extraction and continue with remaining frames
+    }
+  }
+
+  return thumbnails;
 };
 
 export const isLargeVideo = (video: VideoMeta): boolean =>

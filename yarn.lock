@@ -3094,6 +3094,7 @@ __metadata:
     react: "npm:19.2.3"
     react-native: "npm:0.84.0"
     react-native-blur: "npm:^3.2.2"
+    react-native-create-thumbnail: "npm:^2.2.0"
     react-native-draggable-flatlist: "npm:^4.0.3"
     react-native-fs: "npm:^2.20.0"
     react-native-gesture-handler: "npm:^2.30.0"
@@ -8086,6 +8087,13 @@ __metadata:
   dependencies:
     prop-types: "npm:^15.5.10"
   checksum: 10c0/c5bc013eda2a6e388fe1f7f90a6cb55b9bb4a66c0d97e59592b6c4d600d679e370c70ba42cb7336e61c32c12a1bca27f44e3819e28951a3e0d71ddd3ef137fbf
+  languageName: node
+  linkType: hard
+
+"react-native-create-thumbnail@npm:^2.2.0":
+  version: 2.2.0
+  resolution: "react-native-create-thumbnail@npm:2.2.0"
+  checksum: 10c0/4dc9f1d9afdc64862d348ea946f7b6ceae174d40f4b052ecce6a7b71034e25a4d85a655099541d87fb1d20336bccb821574c718b5c73ef62191dce6ebeac73c5
   languageName: node
   linkType: hard
 

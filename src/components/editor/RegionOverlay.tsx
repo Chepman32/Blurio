@@ -14,8 +14,8 @@ import { useAppTheme } from '../../theme';
 interface RegionOverlayProps {
   track: RenderStateTrack;
   selected: boolean;
-  canvasWidth: number;
-  canvasHeight: number;
+  width: number;
+  height: number;
 }
 
 const handles = [
@@ -34,8 +34,8 @@ const HANDLE_SIZE = 12;
 export const RegionOverlay: React.FC<RegionOverlayProps> = ({
   track,
   selected,
-  canvasWidth,
-  canvasHeight,
+  width,
+  height,
 }) => {
   const { colors } = useAppTheme();
   const selection = useSharedValue(selected ? 1 : 0);
@@ -77,10 +77,12 @@ export const RegionOverlay: React.FC<RegionOverlayProps> = ({
     ],
   }));
 
-  const left = track.values.x * canvasWidth;
-  const top = track.values.y * canvasHeight;
-  const width = Math.max(track.values.width * canvasWidth, 24);
-  const height = Math.max(track.values.height * canvasHeight, 24);
+  const minSize = Math.min(width, height);
+  const baseCornerRadius = track.values.cornerRadius * minSize;
+  const isEllipse = track.type === 'ellipse' || track.type === 'face';
+  const isSharp = track.type === 'rectangle' || track.type === 'path';
+  const borderRadius = isEllipse ? 9999 : isSharp ? 2 : baseCornerRadius;
+  const borderStyle = track.type === 'path' ? 'dashed' : 'solid';
 
   return (
     <Animated.View
@@ -89,12 +91,13 @@ export const RegionOverlay: React.FC<RegionOverlayProps> = ({
         styles.region,
         outlineStyle,
         {
-          left,
-          top,
+          left: 0,
+          top: 0,
           width,
           height,
           borderColor: selected ? colors.accent : colors.trackStroke,
-          borderRadius: track.values.cornerRadius * Math.min(width, height),
+          borderRadius,
+          borderStyle,
           opacity: track.values.opacity,
           transform: [{ rotate: `${track.values.rotation}deg` }],
         },
@@ -130,7 +133,6 @@ export const RegionOverlay: React.FC<RegionOverlayProps> = ({
 const styles = StyleSheet.create({
   region: {
     position: 'absolute',
-    borderStyle: 'solid',
     shadowColor: '#00AEEF',
   },
   handle: {

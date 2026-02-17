@@ -12,6 +12,9 @@
 		157B3AFD79EB9A2F2378C525 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */; };
 		761780ED2CA45674006654EE /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 761780EC2CA45674006654EE /* AppDelegate.swift */; };
 		81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */; };
+		BF00010120260217000A0001 /* BlurioPreviewViewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF00010120260217000B0001 /* BlurioPreviewViewManager.swift */; };
+		BF00010120260217000A0002 /* BlurioPreviewViewManager.m in Sources */ = {isa = PBXBuildFile; fileRef = BF00010120260217000B0002 /* BlurioPreviewViewManager.m */; };
+		BF00010120260217000A0003 /* BlurioPreviewPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF00010120260217000B0003 /* BlurioPreviewPlayerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -24,6 +27,10 @@
 		5DCACB8F33CDC322A6C60F78 /* libPods-Blurio.a */ = {isa = PBXFileReference; explicitFileType = archive.ar; includeInIndex = 0; path = "libPods-Blurio.a"; sourceTree = BUILT_PRODUCTS_DIR; };
 		761780EC2CA45674006654EE /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = AppDelegate.swift; path = Blurio/AppDelegate.swift; sourceTree = "<group>"; };
 		81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = file.storyboard; name = LaunchScreen.storyboard; path = Blurio/LaunchScreen.storyboard; sourceTree = "<group>"; };
+		BF00010120260217000B0001 /* BlurioPreviewViewManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BlurioPreviewViewManager.swift; path = Blurio/BlurioPreviewViewManager.swift; sourceTree = "<group>"; };
+		BF00010120260217000B0002 /* BlurioPreviewViewManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = BlurioPreviewViewManager.m; path = Blurio/BlurioPreviewViewManager.m; sourceTree = "<group>"; };
+		BF00010120260217000B0003 /* BlurioPreviewPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BlurioPreviewPlayerView.swift; path = Blurio/BlurioPreviewPlayerView.swift; sourceTree = "<group>"; };
+		BF00010120260217000B0004 /* Blurio-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Blurio-Bridging-Header.h"; path = "Blurio/Blurio-Bridging-Header.h"; sourceTree = "<group>"; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -44,6 +51,10 @@
 			children = (
 				13B07FB51A68108700A75B9A /* Images.xcassets */,
 				761780EC2CA45674006654EE /* AppDelegate.swift */,
+				BF00010120260217000B0001 /* BlurioPreviewViewManager.swift */,
+				BF00010120260217000B0002 /* BlurioPreviewViewManager.m */,
+				BF00010120260217000B0003 /* BlurioPreviewPlayerView.swift */,
+				BF00010120260217000B0004 /* Blurio-Bridging-Header.h */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
@@ -247,6 +258,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				761780ED2CA45674006654EE /* AppDelegate.swift in Sources */,
+				BF00010120260217000A0001 /* BlurioPreviewViewManager.swift in Sources */,
+				BF00010120260217000A0002 /* BlurioPreviewViewManager.m in Sources */,
+				BF00010120260217000A0003 /* BlurioPreviewPlayerView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -276,6 +290,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = Blurio;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_OBJC_BRIDGING_HEADER = "Blurio/Blurio-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -305,6 +320,7 @@
 				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
 				PRODUCT_NAME = Blurio;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_OBJC_BRIDGING_HEADER = "Blurio/Blurio-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 				VERSIONING_SYSTEM = "apple-generic";

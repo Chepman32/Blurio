@@ -43,7 +43,8 @@ export const AnimatedSlider: React.FC<AnimatedSliderProps> = ({
   }, [max, min, progress, value]);
 
   const onLayout = (event: LayoutChangeEvent) => {
-    setTrackWidth(event.nativeEvent.layout.width);
+    const width = event.nativeEvent.layout.width;
+    setTrackWidth(current => (Math.abs(current - width) < 0.5 ? current : width));
   };
 
   const pan = Gesture.Pan()

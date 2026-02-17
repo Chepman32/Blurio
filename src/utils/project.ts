@@ -82,7 +82,7 @@ export const createProject = (
     name: providedName ?? `Project ${new Date(timestamp).toLocaleDateString()}`,
     createdAt: timestamp,
     updatedAt: timestamp,
-    thumbnailUri: video.thumbnailUris[0] ?? video.localUri,
+    thumbnailUri: video.thumbnailUris[0] ?? '',
     accentColor,
     video,
     tracks: [

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   Alert,
   Image,
@@ -12,7 +12,11 @@ import { BlurButton, GradientBackground, ShimmerOverlay, AppText } from '../comp
 import { SPACING, STRINGS } from '../constants';
 import type { RootStackParamList, VideoMeta } from '../types';
 import { useEditorStore } from '../store';
-import { createVideoMetaFromAsset, isICloudOnlyAsset } from '../utils';
+import {
+  createVideoMetaFromAsset,
+  generateVideoThumbnails,
+  isICloudOnlyAsset,
+} from '../utils';
 import { useAppTheme } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Import'>;
@@ -26,8 +30,14 @@ export const ImportScreen: React.FC<Props> = ({ navigation }) => {
 
   const [preparing, setPreparing] = useState(false);
   const [videoMeta, setVideoMeta] = useState<VideoMeta | null>(null);
+  const [previewImageFailed, setPreviewImageFailed] = useState(false);
+  const [failedThumbs, setFailedThumbs] = useState<Record<string, boolean>>({});
+  const pickTokenRef = useRef(0);
 
   const pickVideo = async () => {
+    const token = pickTokenRef.current + 1;
+    pickTokenRef.current = token;
+
     const response = await launchImageLibrary({
       mediaType: 'video',
       selectionLimit: 1,
@@ -56,10 +66,34 @@ export const ImportScreen: React.FC<Props> = ({ navigation }) => {
 
     setPreparing(true);
     setVideoMeta(meta);
+    setPreviewImageFailed(false);
+    setFailedThumbs({});
 
-    setTimeout(() => {
+    try {
+      const [thumbnailUris] = await Promise.all([
+        generateVideoThumbnails(meta.localUri, meta.durationMs),
+        new Promise<void>(resolve => setTimeout(resolve, 420)),
+      ]);
+
+      if (pickTokenRef.current !== token) {
+        return;
+      }
+
+      setVideoMeta(current =>
+        current && current.id === meta.id
+          ? {
+              ...current,
+              thumbnailUris,
+            }
+          : current,
+      );
+    } finally {
+      if (pickTokenRef.current !== token) {
+        return;
+      }
+
       setPreparing(false);
-    }, 850);
+    }
   };
 
   const openEditor = () => {
@@ -95,7 +129,23 @@ export const ImportScreen: React.FC<Props> = ({ navigation }) => {
                 backgroundColor: `${colors.card}CC`,
               },
             ]}>
-            <Image source={{ uri: videoMeta.thumbnailUris[0] }} style={styles.previewImage} />
+            {videoMeta.thumbnailUris[0] && !previewImageFailed ? (
+              <Image
+                source={{ uri: videoMeta.thumbnailUris[0] }}
+                style={styles.previewImage}
+                onError={() => setPreviewImageFailed(true)}
+              />
+            ) : (
+              <View
+                style={[
+                  styles.previewFallback,
+                  { backgroundColor: `${colors.backgroundTop}AA` },
+                ]}>
+                <AppText variant="micro" color={colors.textMuted}>
+                  {STRINGS.editor.previewUnavailable}
+                </AppText>
+              </View>
+            )}
 
             {preparing ? (
               <>
@@ -113,9 +163,43 @@ export const ImportScreen: React.FC<Props> = ({ navigation }) => {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.thumbStrip}>
-              {videoMeta.thumbnailUris.map(uri => (
-                <Image key={uri} source={{ uri }} style={styles.thumb} />
-              ))}
+              {videoMeta.thumbnailUris.length === 0 ? (
+                <View
+                  style={[
+                    styles.thumb,
+                    styles.thumbFallback,
+                    { borderColor: colors.cardBorder, backgroundColor: `${colors.card}80` },
+                  ]}>
+                  <AppText variant="micro" color={colors.textMuted}>
+                    {STRINGS.import.preparing}
+                  </AppText>
+                </View>
+              ) : (
+                videoMeta.thumbnailUris.map((uri, index) =>
+                  failedThumbs[uri] ? (
+                    <View
+                      key={`${uri}-${index}`}
+                      style={[
+                        styles.thumb,
+                        styles.thumbFallback,
+                        { borderColor: colors.cardBorder, backgroundColor: `${colors.card}80` },
+                      ]}
+                    />
+                  ) : (
+                    <Image
+                      key={`${uri}-${index}`}
+                      source={{ uri }}
+                      style={styles.thumb}
+                      onError={() =>
+                        setFailedThumbs(prev => ({
+                          ...prev,
+                          [uri]: true,
+                        }))
+                      }
+                    />
+                  ),
+                )
+              )}
             </ScrollView>
           </View>
         ) : null}
@@ -151,6 +235,12 @@ const styles = StyleSheet.create({
     width: '100%',
     height: 220,
   },
+  previewFallback: {
+    width: '100%',
+    height: 220,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   overlayTextWrap: {
     position: 'absolute',
     left: 0,
@@ -167,6 +257,11 @@ const styles = StyleSheet.create({
     width: 48,
     height: 36,
     borderRadius: 6,
+  },
+  thumbFallback: {
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   doneButton: {
     marginTop: 'auto',

@@ -76,6 +76,9 @@ interface BlurioStore {
   setGuidesVisible: (visible: boolean) => void;
   setThumbnailsVisible: (visible: boolean) => void;
   setSafeAreaOverlayVisible: (visible: boolean) => void;
+  beginTrackValueInteraction: () => void;
+  endTrackValueInteraction: () => void;
+  updateSelectedTrackValuesLive: (partial: Partial<KeyframeValues>) => void;
   updateSelectedTrackValuesAtPlayhead: (partial: Partial<KeyframeValues>) => void;
   setInterpolationPicker: (interpolation: InterpolationType) => void;
   toggleKeyframeParameterEnabled: (parameter: KeyframeParameter, enabled: boolean) => void;
@@ -151,6 +154,11 @@ const persistSettings = (settings: StoredSettings): void => {
 };
 
 const maxUndoEntries = 80;
+const EPSILON = 0.0001;
+let trackValueInteractionDepth = 0;
+let trackValueInteractionSnapshot: UndoEntry | null = null;
+
+const approxEqual = (a: number, b: number): boolean => Math.abs(a - b) <= EPSILON;
 
 const updateProjectAndPersist = (
   projects: Record<ID, Project>,
@@ -234,6 +242,78 @@ const findKeyframeAtPlayhead = (
   );
 
   return exact ?? null;
+};
+
+const applySelectedTrackValuesAtPlayhead = (
+  state: Pick<BlurioStore, 'projects' | 'ui'>,
+  partial: Partial<KeyframeValues>,
+): { projects: Record<ID, Project>; projectId: ID } | null => {
+  const project = findSelectedProject(state);
+  const selectedTrackId = state.ui.selectedTrackId;
+  if (!project || !selectedTrackId) {
+    return null;
+  }
+
+  const track = project.tracks.find(item => item.id === selectedTrackId);
+  if (!track || track.locked) {
+    return null;
+  }
+
+  const existingKeyframe = findKeyframeAtPlayhead(track, state.ui.playheadMs);
+  const updatedProject: Project = {
+    ...project,
+    tracks: project.tracks.map(candidate => {
+      if (candidate.id !== selectedTrackId) {
+        return candidate;
+      }
+
+      if (existingKeyframe) {
+        return {
+          ...candidate,
+          keyframes: candidate.keyframes.map(keyframe =>
+            keyframe.id === existingKeyframe.id
+              ? {
+                  ...keyframe,
+                  values: {
+                    ...keyframe.values,
+                    ...partial,
+                  },
+                }
+              : keyframe,
+          ),
+        };
+      }
+
+      const values = {
+        ...interpolateTrackValuesAtTime(candidate, state.ui.playheadMs),
+        ...partial,
+      };
+
+      const keyframe: Keyframe = {
+        id: createId('kf'),
+        timeMs: state.ui.playheadMs,
+        interpolation: state.ui.interpolationPickerValue,
+        values,
+        createdAt: Date.now(),
+        parameterMask: {
+          ...state.ui.enabledKeyframeParams,
+        },
+      };
+
+      return {
+        ...candidate,
+        keyframes: [...candidate.keyframes, keyframe].sort((a, b) => a.timeMs - b.timeMs),
+      };
+    }),
+  };
+
+  return {
+    projects: {
+      ...state.projects,
+      [project.id]: updatedProject,
+    },
+    projectId: project.id,
+  };
 };
 
 const applyTemplateValues = (template?: 'face' | 'plate'): Partial<KeyframeValues> => {
@@ -377,11 +457,20 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
   selectProject: projectId => {
     set(state => {
       const project = projectId ? state.projects[projectId] : null;
+      const selectedTrackId = project?.tracks[0]?.id ?? null;
+      if (
+        state.ui.selectedProjectId === projectId &&
+        state.ui.selectedTrackId === selectedTrackId &&
+        state.ui.playheadMs === 0
+      ) {
+        return state;
+      }
+
       return {
         ui: {
           ...state.ui,
           selectedProjectId: projectId,
-          selectedTrackId: project?.tracks[0]?.id ?? null,
+          selectedTrackId,
           playheadMs: 0,
         },
       };
@@ -389,12 +478,16 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
   },
 
   selectTrack: trackId => {
-    set(state => ({
-      ui: {
-        ...state.ui,
-        selectedTrackId: trackId,
-      },
-    }));
+    set(state =>
+      state.ui.selectedTrackId === trackId
+        ? state
+        : {
+            ui: {
+              ...state.ui,
+              selectedTrackId: trackId,
+            },
+          },
+    );
   },
 
   addTrack: (type, template) => {
@@ -633,6 +726,10 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
       }
     }
 
+    if (approxEqual(state.ui.playheadMs, playheadMs)) {
+      return;
+    }
+
     set({
       ui: {
         ...state.ui,
@@ -642,59 +739,88 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
   },
 
   setTimelineZoom: zoom => {
-    set(state => ({
-      ui: {
-        ...state.ui,
-        timelineZoom: Math.max(0.4, Math.min(zoom, 5)),
-      },
-    }));
+    set(state => {
+      const timelineZoom = Math.max(0.4, Math.min(zoom, 5));
+      if (approxEqual(state.ui.timelineZoom, timelineZoom)) {
+        return state;
+      }
+
+      return {
+        ui: {
+          ...state.ui,
+          timelineZoom,
+        },
+      };
+    });
   },
 
   setTimelineExpanded: expanded => {
-    set(state => ({
-      ui: {
-        ...state.ui,
-        timelineExpanded: expanded,
-      },
-    }));
+    set(state =>
+      state.ui.timelineExpanded === expanded
+        ? state
+        : {
+            ui: {
+              ...state.ui,
+              timelineExpanded: expanded,
+            },
+          },
+    );
   },
 
   setTimelinePrecisionMode: enabled => {
-    set(state => ({
-      ui: {
-        ...state.ui,
-        timelinePrecisionMode: enabled,
-      },
-    }));
+    set(state =>
+      state.ui.timelinePrecisionMode === enabled
+        ? state
+        : {
+            ui: {
+              ...state.ui,
+              timelinePrecisionMode: enabled,
+            },
+          },
+    );
   },
 
   setCanvasTransform: (zoom, panX, panY) => {
-    set(state => ({
-      ui: {
-        ...state.ui,
-        canvasZoom: zoom,
-        canvasPanX: panX,
-        canvasPanY: panY,
-      },
-    }));
+    set(state =>
+      approxEqual(state.ui.canvasZoom, zoom) &&
+      approxEqual(state.ui.canvasPanX, panX) &&
+      approxEqual(state.ui.canvasPanY, panY)
+        ? state
+        : {
+            ui: {
+              ...state.ui,
+              canvasZoom: zoom,
+              canvasPanX: panX,
+              canvasPanY: panY,
+            },
+          },
+    );
   },
 
   setActivePanel: panel => {
-    set(state => ({
-      ui: {
-        ...state.ui,
-        activePanel: panel,
-      },
-    }));
+    set(state =>
+      state.ui.activePanel === panel
+        ? state
+        : {
+            ui: {
+              ...state.ui,
+              activePanel: panel,
+            },
+          },
+    );
   },
 
   setSheetExpanded: expanded => {
-    set(state => ({
-      ui: {
-        ...state.ui,
-        isSheetExpanded: expanded,
-      },
-    }));
+    set(state =>
+      state.ui.isSheetExpanded === expanded
+        ? state
+        : {
+            ui: {
+              ...state.ui,
+              isSheetExpanded: expanded,
+            },
+          },
+    );
   },
 
   setPreviewQuality: quality => {
@@ -723,96 +849,143 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
   },
 
   setGuidesVisible: visible => {
-    set(state => ({
-      ui: {
-        ...state.ui,
-        showGuides: visible,
-      },
-    }));
+    set(state =>
+      state.ui.showGuides === visible
+        ? state
+        : {
+            ui: {
+              ...state.ui,
+              showGuides: visible,
+            },
+          },
+    );
   },
 
   setThumbnailsVisible: visible => {
-    set(state => ({
-      ui: {
-        ...state.ui,
-        showThumbnails: visible,
-      },
-    }));
+    set(state =>
+      state.ui.showThumbnails === visible
+        ? state
+        : {
+            ui: {
+              ...state.ui,
+              showThumbnails: visible,
+            },
+          },
+    );
   },
 
   setSafeAreaOverlayVisible: visible => {
-    set(state => ({
-      ui: {
-        ...state.ui,
-        showSafeAreaOverlay: visible,
+    set(state =>
+      state.ui.showSafeAreaOverlay === visible
+        ? state
+        : {
+            ui: {
+              ...state.ui,
+              showSafeAreaOverlay: visible,
+            },
+          },
+    );
+  },
+
+  beginTrackValueInteraction: () => {
+    const state = get();
+    if (trackValueInteractionDepth === 0) {
+      const selectedProjectId = state.ui.selectedProjectId;
+      trackValueInteractionSnapshot = selectedProjectId
+        ? projectSnapshot(state, selectedProjectId)
+        : null;
+      if (trackValueInteractionSnapshot) {
+        trackValueInteractionSnapshot.description = 'transform';
+      }
+    }
+    trackValueInteractionDepth += 1;
+  },
+
+  endTrackValueInteraction: () => {
+    if (trackValueInteractionDepth === 0) {
+      return;
+    }
+
+    trackValueInteractionDepth = Math.max(0, trackValueInteractionDepth - 1);
+    if (trackValueInteractionDepth > 0) {
+      return;
+    }
+
+    const state = get();
+    const snapshot = trackValueInteractionSnapshot;
+    trackValueInteractionSnapshot = null;
+
+    const projectId = snapshot?.snapshot.projectId ?? state.ui.selectedProjectId;
+    if (!projectId) {
+      return;
+    }
+
+    const project = state.projects[projectId];
+    if (!project) {
+      return;
+    }
+
+    const currentDigest = JSON.stringify(project.tracks);
+    const changed = snapshot
+      ? currentDigest !== snapshot.snapshot.tracksDigest
+      : true;
+    if (!changed) {
+      return;
+    }
+
+    const projects = {
+      ...state.projects,
+      [projectId]: {
+        ...project,
+        updatedAt: Date.now(),
       },
-    }));
+    };
+    persistProjects(projects);
+
+    if (snapshot) {
+      pushUndoEntry(state, snapshot);
+    }
+
+    set({
+      projects,
+      undoStack: [...state.undoStack],
+      redoStack: [...state.redoStack],
+    });
+  },
+
+  updateSelectedTrackValuesLive: partial => {
+    const state = get();
+    const next = applySelectedTrackValuesAtPlayhead(state, partial);
+    if (!next) {
+      return;
+    }
+
+    set({
+      projects: next.projects,
+    });
   },
 
   updateSelectedTrackValuesAtPlayhead: partial => {
     const state = get();
-    const project = findSelectedProject(state);
-    const selectedTrackId = state.ui.selectedTrackId;
-    if (!project || !selectedTrackId) {
+    const next = applySelectedTrackValuesAtPlayhead(state, partial);
+    if (!next) {
       return;
     }
 
-    const track = project.tracks.find(item => item.id === selectedTrackId);
-    if (!track || track.locked) {
+    const snapshot = projectSnapshot(state, next.projectId);
+    const nextProject = next.projects[next.projectId];
+    if (!nextProject) {
       return;
     }
 
-    const snapshot = projectSnapshot(state, project.id);
-
-    const existingKeyframe = findKeyframeAtPlayhead(track, state.ui.playheadMs);
-    const projects = updateProjectAndPersist(state.projects, project.id, current => ({
-      ...current,
-      tracks: current.tracks.map(candidate => {
-        if (candidate.id !== selectedTrackId) {
-          return candidate;
-        }
-
-        if (existingKeyframe) {
-          return {
-            ...candidate,
-            keyframes: candidate.keyframes.map(keyframe =>
-              keyframe.id === existingKeyframe.id
-                ? {
-                    ...keyframe,
-                    values: {
-                      ...keyframe.values,
-                      ...partial,
-                    },
-                  }
-                : keyframe,
-            ),
-          };
-        }
-
-        const values = {
-          ...interpolateTrackValuesAtTime(candidate, state.ui.playheadMs),
-          ...partial,
-        };
-
-        const keyframe: Keyframe = {
-          id: createId('kf'),
-          timeMs: state.ui.playheadMs,
-          interpolation: state.ui.interpolationPickerValue,
-          values,
-          createdAt: Date.now(),
-          parameterMask: {
-            ...state.ui.enabledKeyframeParams,
-          },
-        };
-
-        return {
-          ...candidate,
-          keyframes: [...candidate.keyframes, keyframe].sort(
-            (a, b) => a.timeMs - b.timeMs,
-          ),
-        };
-      }),
-    }));
+    const projects: Record<ID, Project> = {
+      ...next.projects,
+      [next.projectId]: {
+        ...nextProject,
+        updatedAt: Date.now(),
+      },
+    };
+    persistProjects(projects);
 
     pushUndoEntry(state, snapshot);
 
@@ -824,24 +997,32 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
   },
 
   setInterpolationPicker: interpolation => {
-    set(state => ({
-      ui: {
-        ...state.ui,
-        interpolationPickerValue: interpolation,
-      },
-    }));
+    set(state =>
+      state.ui.interpolationPickerValue === interpolation
+        ? state
+        : {
+            ui: {
+              ...state.ui,
+              interpolationPickerValue: interpolation,
+            },
+          },
+    );
   },
 
   toggleKeyframeParameterEnabled: (parameter, enabled) => {
-    set(state => ({
-      ui: {
-        ...state.ui,
-        enabledKeyframeParams: {
-          ...state.ui.enabledKeyframeParams,
-          [parameter]: enabled,
-        },
-      },
-    }));
+    set(state =>
+      state.ui.enabledKeyframeParams[parameter] === enabled
+        ? state
+        : {
+            ui: {
+              ...state.ui,
+              enabledKeyframeParams: {
+                ...state.ui.enabledKeyframeParams,
+                [parameter]: enabled,
+              },
+            },
+          },
+    );
   },
 
   addKeyframeAtPlayhead: () => {
@@ -1090,6 +1271,10 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
 
   setAppearance: appearance => {
     const state = get();
+    if (state.settings.appearance === appearance) {
+      return;
+    }
+
     const settings = {
       ...state.settings,
       appearance,
@@ -1101,6 +1286,10 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
 
   setReduceMotionOverride: value => {
     const state = get();
+    if (state.settings.reduceMotionOverride === value) {
+      return;
+    }
+
     const settings = {
       ...state.settings,
       reduceMotionOverride: value,
@@ -1112,6 +1301,10 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
 
   setAccentColor: color => {
     const state = get();
+    if (state.settings.accentColor === color) {
+      return;
+    }
+
     const settings = {
       ...state.settings,
       accentColor: color,
@@ -1135,6 +1328,10 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
 
   setAutoGenerateThumbs: enabled => {
     const state = get();
+    if (state.settings.autoGenerateThumbs === enabled) {
+      return;
+    }
+
     const settings = {
       ...state.settings,
       autoGenerateThumbs: enabled,
@@ -1146,6 +1343,13 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
 
   setSafeAreaOverlayDefault: enabled => {
     const state = get();
+    if (
+      state.settings.safeAreaOverlayDefault === enabled &&
+      state.ui.showSafeAreaOverlay === enabled
+    ) {
+      return;
+    }
+
     const settings = {
       ...state.settings,
       safeAreaOverlayDefault: enabled,
