@@ -52,7 +52,6 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
   const renderState = useCurrentRenderState();
 
   const ui = useEditorStore(state => state.ui);
-  const selectedProjectId = useEditorStore(state => state.ui.selectedProjectId);
   const setPlayhead = useEditorStore(state => state.setPlayhead);
   const setTimelineZoom = useEditorStore(state => state.setTimelineZoom);
   const setTimelineExpanded = useEditorStore(state => state.setTimelineExpanded);
@@ -96,7 +95,6 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
   const setSafeAreaOverlayVisible = useEditorStore(state => state.setSafeAreaOverlayVisible);
   const undo = useEditorStore(state => state.undo);
   const redo = useEditorStore(state => state.redo);
-  const selectProject = useEditorStore(state => state.selectProject);
 
   const setAssetUnavailablePromptVisible = useEditorStore(
     state => state.setAssetUnavailablePromptVisible,
@@ -135,10 +133,11 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
   }));
 
   useEffect(() => {
-    if (selectedProjectId !== route.params.projectId) {
-      selectProject(route.params.projectId);
+    const state = useEditorStore.getState();
+    if (state.ui.selectedProjectId !== route.params.projectId) {
+      state.selectProject(route.params.projectId);
     }
-  }, [route.params.projectId, selectProject, selectedProjectId]);
+  }, [route.params.projectId]);
 
   useEffect(() => {
     const validateAsset = async () => {
