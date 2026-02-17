@@ -1,0 +1,152 @@
+import React, { useEffect, useMemo } from 'react';
+import { Dimensions, StyleSheet, View } from 'react-native';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Animated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
+import { RADIUS } from '../../constants';
+import { useAppTheme } from '../../theme';
+import { AppText } from './AppText';
+
+interface SpringBottomSheetProps {
+  title: string;
+  collapsedHeight: number;
+  midHeight: number;
+  expandedHeight: number;
+  expanded: boolean;
+  onExpandedChange: (expanded: boolean) => void;
+  children: React.ReactNode;
+}
+
+const { height: windowHeight } = Dimensions.get('window');
+
+export const SpringBottomSheet: React.FC<SpringBottomSheetProps> = ({
+  title,
+  collapsedHeight,
+  midHeight,
+  expandedHeight,
+  expanded,
+  onExpandedChange,
+  children,
+}) => {
+  const { colors } = useAppTheme();
+  const snapHeights = useMemo(
+    () => [collapsedHeight, midHeight, expandedHeight],
+    [collapsedHeight, midHeight, expandedHeight],
+  );
+
+  const maxHeight = Math.min(expandedHeight, windowHeight * 0.82);
+  const minTranslate = Math.max(windowHeight - maxHeight, 56);
+  const translateY = useSharedValue(windowHeight - midHeight);
+  const contextTranslate = useSharedValue(windowHeight - midHeight);
+
+  useEffect(() => {
+    const target = expanded ? minTranslate : windowHeight - midHeight;
+    translateY.value = withSpring(target, {
+      damping: 18,
+      stiffness: 190,
+    });
+  }, [expanded, midHeight, minTranslate, translateY]);
+
+  const resolveSnap = (position: number, velocityY: number): number => {
+    'worklet';
+    const projected = position + velocityY * 0.08;
+
+    const points = snapHeights.map(heightValue => windowHeight - heightValue);
+    if (points.length === 0) {
+      return windowHeight - midHeight;
+    }
+
+    let nearest = points[0] ?? windowHeight - midHeight;
+    let nearestDistance = Math.abs(projected - nearest);
+
+    for (let i = 1; i < points.length; i += 1) {
+      const point = points[i] ?? nearest;
+      const distance = Math.abs(projected - point);
+      if (distance < nearestDistance) {
+        nearest = point;
+        nearestDistance = distance;
+      }
+    }
+
+    return Math.max(minTranslate, Math.min(nearest, windowHeight - collapsedHeight));
+  };
+
+  const pan = Gesture.Pan()
+    .onStart(() => {
+      contextTranslate.value = translateY.value;
+    })
+    .onUpdate(event => {
+      const next = contextTranslate.value + event.translationY;
+      translateY.value = Math.max(minTranslate, Math.min(next, windowHeight - collapsedHeight));
+    })
+    .onEnd(event => {
+      const snap = resolveSnap(translateY.value, event.velocityY);
+      const isExpanded = snap <= windowHeight - midHeight - 40;
+
+      translateY.value = withSpring(snap, {
+        damping: 17,
+        stiffness: 180,
+        velocity: event.velocityY,
+      });
+
+      runOnJS(onExpandedChange)(isExpanded);
+    });
+
+  const animatedStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
+
+  return (
+    <GestureDetector gesture={pan}>
+      <Animated.View
+        accessibilityLabel={title}
+        style={[
+          styles.sheet,
+          animatedStyle,
+          {
+            height: maxHeight,
+            backgroundColor: colors.sheet,
+            borderColor: colors.cardBorder,
+          },
+        ]}>
+        <View style={styles.handleRow}>
+          <View style={[styles.handle, { backgroundColor: colors.textMuted }]} />
+          <AppText variant="section" color={colors.textSecondary}>
+            {title}
+          </AppText>
+        </View>
+        <View style={styles.content}>{children}</View>
+      </Animated.View>
+    </GestureDetector>
+  );
+};
+
+const styles = StyleSheet.create({
+  sheet: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    borderTopLeftRadius: RADIUS.sheet,
+    borderTopRightRadius: RADIUS.sheet,
+    borderWidth: 1,
+    overflow: 'hidden',
+  },
+  handleRow: {
+    alignItems: 'center',
+    paddingTop: 8,
+    paddingBottom: 10,
+    gap: 8,
+  },
+  handle: {
+    width: 42,
+    height: 4,
+    borderRadius: 99,
+  },
+  content: {
+    flex: 1,
+  },
+});

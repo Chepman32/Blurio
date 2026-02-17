@@ -10,10 +10,28 @@
     "test": "jest"
   },
   "dependencies": {
+    "@react-native-community/slider": "^5.1.2",
+    "@react-navigation/native": "^7.1.28",
+    "@react-navigation/native-stack": "^7.13.0",
+    "lucide-react-native": "^0.568.0",
     "react": "19.2.3",
     "react-native": "0.84.0",
-    "@react-native/new-app-screen": "0.84.0",
-    "react-native-safe-area-context": "^5.5.2"
+    "react-native-blur": "^3.2.2",
+    "react-native-draggable-flatlist": "^4.0.3",
+    "react-native-fs": "^2.20.0",
+    "react-native-gesture-handler": "^2.30.0",
+    "react-native-haptic-feedback": "^2.3.3",
+    "react-native-image-picker": "^8.2.1",
+    "react-native-linear-gradient": "^2.8.3",
+    "react-native-mmkv": "^4.1.2",
+    "react-native-nitro-modules": "^0.33.9",
+    "react-native-reanimated": "^4.3.0-nightly-20260216-358eda585",
+    "react-native-safe-area-context": "^5.5.2",
+    "react-native-screens": "^4.23.0",
+    "react-native-svg": "^15.15.3",
+    "react-native-vector-icons": "^10.3.0",
+    "react-native-worklets": "^0.8.0-nightly-20260216-358eda585",
+    "zustand": "^5.0.11"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
@@ -37,5 +55,6 @@
   },
   "engines": {
     "node": ">= 22.11.0"
-  }
+  },
+  "packageManager": "yarn@4.5.3+sha512.3003a14012e2987072d244c720506549c1aab73ee728208f1b2580a9fd67b92d61ba6b08fe93f6dce68fd771e3af1e59a0afa28dd242dd0940d73b95fedd4e90"
 }
