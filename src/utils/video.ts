@@ -239,6 +239,33 @@ export const restoreVideoMetaFiles = async (
   const withPersistentSource = await persistVideoSource(video);
   const available = await checkAssetAvailability(withPersistentSource.localUri);
   if (!available) {
+    // Local video copy is missing (e.g. after pod reinstall / clean install).
+    // Try to restore thumbnails from assetUri (e.g. a persistent ph:// photo-library
+    // reference) so the project card stays functional while the source is unlinked.
+    const assetUri = video.assetUri ?? '';
+    if (assetUri) {
+      const assetAvailable = await checkAssetAvailability(assetUri);
+      if (assetAvailable) {
+        const firstThumbnail = withPersistentSource.thumbnailUris[0] ?? '';
+        const hasThumbnail = firstThumbnail
+          ? await checkAssetAvailability(firstThumbnail)
+          : false;
+        if (!hasThumbnail) {
+          const regenerated = await generateVideoThumbnails(
+            assetUri,
+            withPersistentSource.durationMs,
+            Math.max(withPersistentSource.thumbnailUris.length, DEFAULT_THUMBNAIL_COUNT),
+            withPersistentSource.id,
+          );
+          return {
+            ...withPersistentSource,
+            unavailable: true,
+            thumbnailUris:
+              regenerated.length > 0 ? regenerated : withPersistentSource.thumbnailUris,
+          };
+        }
+      }
+    }
     return {
       ...withPersistentSource,
       unavailable: true,

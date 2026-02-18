@@ -204,18 +204,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const onRemoveProject = (project: Project) => {
-    Alert.alert(
-      STRINGS.home.removeConfirmTitle,
-      STRINGS.home.removeConfirmBody,
-      [
-        { text: STRINGS.common.cancel, style: 'cancel' },
-        {
-          text: STRINGS.home.removeAction,
-          style: 'destructive',
-          onPress: () => deleteProject(project.id),
-        },
-      ],
-    );
+    deleteProject(project.id);
   };
 
   const onRemoveProjectPermanently = (project: Project) => {

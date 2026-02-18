@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useCallback, useRef, useState } from 'react';
 import {
   Alert,
   Image,
@@ -7,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { BlurButton, GradientBackground, ShimmerOverlay, AppText } from '../components/common';
 import { SPACING, STRINGS } from '../constants';
@@ -34,75 +35,85 @@ export const ImportScreen: React.FC<Props> = ({ navigation }) => {
   const [previewImageFailed, setPreviewImageFailed] = useState(false);
   const [failedThumbs, setFailedThumbs] = useState<Record<string, boolean>>({});
   const pickTokenRef = useRef(0);
+  const isPickingRef = useRef(false);
 
-  const pickVideo = async () => {
+  const pickVideo = useCallback(async () => {
+    if (isPickingRef.current) {
+      return;
+    }
+
+    isPickingRef.current = true;
     const token = pickTokenRef.current + 1;
     pickTokenRef.current = token;
 
-    const response = await launchImageLibrary({
-      mediaType: 'video',
-      selectionLimit: 1,
-      includeExtra: true,
-      formatAsMp4: false,
-      presentationStyle: 'fullScreen',
-    });
-
-    const asset = response.assets?.[0];
-
-    if (!asset) {
-      return;
-    }
-
-    if (isICloudOnlyAsset(asset)) {
-      Alert.alert(STRINGS.import.iCloudWarningTitle, STRINGS.import.iCloudWarningBody);
-      return;
-    }
-
-    const meta = createVideoMetaFromAsset(asset);
-    if (!meta || meta.unsupportedCodec || meta.corrupted) {
-      setUnsupportedVideoPromptVisible(true);
-      Alert.alert(STRINGS.import.unsupportedTitle, STRINGS.import.unsupportedBody);
-      return;
-    }
-
-    const persistedMeta = await persistVideoSource(meta);
-
-    setPreparing(true);
-    setVideoMeta(persistedMeta);
-    setPreviewImageFailed(false);
-    setFailedThumbs({});
-
     try {
-      const [thumbnailUris] = await Promise.all([
-        generateVideoThumbnails(
-          persistedMeta.localUri,
-          persistedMeta.durationMs,
-          12,
-          persistedMeta.id,
-        ),
-        new Promise<void>(resolve => setTimeout(resolve, 420)),
-      ]);
+      const response = await launchImageLibrary({
+        mediaType: 'video',
+        selectionLimit: 1,
+        includeExtra: true,
+        formatAsMp4: false,
+        presentationStyle: 'fullScreen',
+      });
 
-      if (pickTokenRef.current !== token) {
+      const asset = response.assets?.[0];
+
+      if (!asset) {
         return;
       }
 
-      setVideoMeta(current =>
-        current && current.id === persistedMeta.id
-          ? {
-              ...current,
-              thumbnailUris,
-            }
-          : current,
-      );
+      if (isICloudOnlyAsset(asset)) {
+        Alert.alert(STRINGS.import.iCloudWarningTitle, STRINGS.import.iCloudWarningBody);
+        return;
+      }
+
+      const meta = createVideoMetaFromAsset(asset);
+      if (!meta || meta.unsupportedCodec || meta.corrupted) {
+        setUnsupportedVideoPromptVisible(true);
+        Alert.alert(STRINGS.import.unsupportedTitle, STRINGS.import.unsupportedBody);
+        return;
+      }
+
+      const persistedMeta = await persistVideoSource(meta);
+
+      setPreparing(true);
+      setVideoMeta(persistedMeta);
+      setPreviewImageFailed(false);
+      setFailedThumbs({});
+
+      try {
+        const [thumbnailUris] = await Promise.all([
+          generateVideoThumbnails(
+            persistedMeta.localUri,
+            persistedMeta.durationMs,
+            12,
+            persistedMeta.id,
+          ),
+          new Promise<void>(resolve => setTimeout(resolve, 420)),
+        ]);
+
+        if (pickTokenRef.current !== token) {
+          return;
+        }
+
+        setVideoMeta(current =>
+          current && current.id === persistedMeta.id
+            ? {
+                ...current,
+                thumbnailUris,
+              }
+            : current,
+        );
+      } finally {
+        if (pickTokenRef.current !== token) {
+          return;
+        }
+
+        setPreparing(false);
+      }
     } finally {
-      if (pickTokenRef.current !== token) {
-        return;
-      }
-
-      setPreparing(false);
+      isPickingRef.current = false;
     }
-  };
+  }, [setUnsupportedVideoPromptVisible]);
 
   const openEditor = () => {
     if (!videoMeta) {
@@ -115,6 +126,13 @@ export const ImportScreen: React.FC<Props> = ({ navigation }) => {
       fromImport: true,
     });
   };
+
+  useFocusEffect(
+    useCallback(() => {
+    pickVideo().catch(() => undefined);
+    return undefined;
+    }, [pickVideo]),
+  );
 
   return (
     <GradientBackground>

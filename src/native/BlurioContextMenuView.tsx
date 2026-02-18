@@ -40,12 +40,17 @@ export const BlurioContextMenuView: React.FC<BlurioContextMenuViewProps> = ({
   ...viewProps
 }) => {
   if (!NativeBlurioContextMenuView) {
-    return <View {...viewProps}>{children}</View>;
+    return (
+      <View {...viewProps} collapsable={false}>
+        {children}
+      </View>
+    );
   }
 
   return (
     <NativeBlurioContextMenuView
       {...viewProps}
+      collapsable={false}
       menuItems={JSON.stringify(menuItems)}
       onPressMenuItem={event => onPressMenuItem?.(event.nativeEvent.id)}>
       {children}
