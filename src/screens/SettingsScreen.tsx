@@ -1,5 +1,6 @@
 import React, { useMemo } from 'react';
 import {
+  Alert,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
@@ -52,8 +53,13 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const setSafeAreaOverlayDefault = useEditorStore(
     state => state.setSafeAreaOverlayDefault,
   );
+  const cleanTrash = useEditorStore(state => state.cleanTrash);
 
   const projects = useProjectList();
+  const trashCount = useMemo(
+    () => projects.filter(project => project.trashedAt !== null).length,
+    [projects],
+  );
 
   const estimatedStorage = useMemo(
     () => projects.reduce((sum, project) => sum + estimateProjectCacheSizeBytes(project), 0),
@@ -155,6 +161,30 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             <AppText variant="micro" color={colors.textMuted}>
               {STRINGS.settings.projectsCached}: {projects.length}
             </AppText>
+            <AppText variant="micro" color={colors.textMuted}>
+              {STRINGS.home.trashFolder}: {trashCount}
+            </AppText>
+            <BlurButton
+              label={STRINGS.settings.cleanTrash}
+              disabled={trashCount === 0}
+              onPress={() =>
+                Alert.alert(
+                  STRINGS.settings.cleanTrashTitle,
+                  STRINGS.settings.cleanTrashBody,
+                  [
+                    { text: STRINGS.common.cancel, style: 'cancel' },
+                    {
+                      text: STRINGS.settings.cleanTrash,
+                      style: 'destructive',
+                      onPress: () => cleanTrash(),
+                    },
+                  ],
+                )
+              }
+              accessibilityLabel={STRINGS.settings.cleanTrash}
+              variant="secondary"
+              style={styles.cleanTrashButton}
+            />
           </GlassCard>
 
           <GlassCard style={styles.sectionCard}>
@@ -213,5 +243,8 @@ const styles = StyleSheet.create({
   },
   bottomButton: {
     marginTop: SPACING.md,
+  },
+  cleanTrashButton: {
+    marginTop: SPACING.xs,
   },
 });

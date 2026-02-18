@@ -13,6 +13,7 @@ import type {
   KeyframeValues,
   PreviewQuality,
   Project,
+  ProjectFolder,
   RegionTemplate,
   RegionType,
   StoredSettings,
@@ -30,8 +31,10 @@ import {
 } from '../utils/interpolation';
 import { createProject, createTrack, duplicateProject } from '../utils/project';
 import {
+  loadFolders,
   loadProjects,
   loadSettings,
+  saveFolders,
   saveProjects,
   saveSettings,
 } from '../utils/storage';
@@ -47,6 +50,7 @@ interface SharedTransitionState {
 
 interface BlurioStore {
   projects: Record<ID, Project>;
+  folders: Record<ID, ProjectFolder>;
   settings: StoredSettings;
   ui: UIState;
   undoStack: UndoEntry[];
@@ -56,8 +60,16 @@ interface BlurioStore {
   initializeFromDisk: () => void;
   createProjectFromVideo: (video: VideoMeta, name?: string) => ID;
   updateProject: (projectId: ID, updater: (project: Project) => Project) => void;
+  renameProject: (projectId: ID, name: string) => void;
+  moveProjectToFolder: (projectId: ID, folderId: ID) => void;
   deleteProject: (projectId: ID) => void;
+  recoverProject: (projectId: ID) => void;
+  permanentlyDeleteProject: (projectId: ID) => void;
+  cleanTrash: () => void;
   duplicateProjectById: (projectId: ID) => ID | null;
+  createFolder: (name: string) => ID;
+  renameFolder: (folderId: ID, name: string) => void;
+  removeFolder: (folderId: ID) => void;
   selectProject: (projectId: ID | null) => void;
   selectTrack: (trackId: ID | null) => void;
   addTrack: (type: RegionType, template?: 'face' | 'plate') => void;
@@ -148,6 +160,7 @@ const emptyUIState = (settings: StoredSettings): UIState => ({
 
 const getSortedProjectIds = (projects: Record<ID, Project>): ID[] =>
   Object.values(projects)
+    .filter(project => project.trashedAt === null)
     .sort((a, b) => b.updatedAt - a.updatedAt)
     .map(project => project.id);
 
@@ -155,8 +168,85 @@ const persistProjects = (projects: Record<ID, Project>): void => {
   saveProjects(projects);
 };
 
+const persistFolders = (folders: Record<ID, ProjectFolder>): void => {
+  saveFolders(folders);
+};
+
 const persistSettings = (settings: StoredSettings): void => {
   saveSettings(settings);
+};
+
+const DEFAULT_FOLDER_ID = 'folder-default';
+const DEFAULT_FOLDER_NAME = 'Projects';
+
+const createDefaultFolder = (): ProjectFolder => {
+  const timestamp = Date.now();
+  return {
+    id: DEFAULT_FOLDER_ID,
+    name: DEFAULT_FOLDER_NAME,
+    createdAt: timestamp,
+    updatedAt: timestamp,
+  };
+};
+
+const normalizeFolderName = (value: string, fallback = 'Untitled Folder'): string => {
+  const next = value.trim();
+  return next.length > 0 ? next : fallback;
+};
+
+const normalizeProjectName = (value: string, fallback = 'Untitled Project'): string => {
+  const next = value.trim();
+  return next.length > 0 ? next : fallback;
+};
+
+const ensureFolders = (
+  input: Record<ID, ProjectFolder>,
+): Record<ID, ProjectFolder> => {
+  if (Object.keys(input).length > 0) {
+    return input;
+  }
+
+  const fallback = createDefaultFolder();
+  return {
+    [fallback.id]: fallback,
+  };
+};
+
+const getFallbackFolderId = (folders: Record<ID, ProjectFolder>): ID => {
+  const [firstFolderId] = Object.keys(folders);
+  return firstFolderId ?? DEFAULT_FOLDER_ID;
+};
+
+const sanitizeProjects = (
+  projects: Record<ID, Project>,
+  folders: Record<ID, ProjectFolder>,
+): { projects: Record<ID, Project>; changed: boolean } => {
+  const fallbackFolderId = getFallbackFolderId(folders);
+  let changed = false;
+  const nextProjects: Record<ID, Project> = {};
+
+  Object.entries(projects).forEach(([id, project]) => {
+    const hasFolder = project.folderId in folders;
+    const folderId = hasFolder ? project.folderId : fallbackFolderId;
+    const trashedAt =
+      typeof project.trashedAt === 'number' && Number.isFinite(project.trashedAt)
+        ? project.trashedAt
+        : null;
+    if (!hasFolder || trashedAt !== project.trashedAt) {
+      changed = true;
+    }
+
+    nextProjects[id] = {
+      ...project,
+      folderId,
+      trashedAt,
+    };
+  });
+
+  return {
+    projects: changed ? nextProjects : projects,
+    changed,
+  };
 };
 
 const maxUndoEntries = 80;
@@ -227,7 +317,12 @@ const findSelectedProject = (
     return null;
   }
 
-  return state.projects[selected] ?? null;
+  const project = state.projects[selected] ?? null;
+  if (!project || project.trashedAt !== null) {
+    return null;
+  }
+
+  return project;
 };
 
 const pushUndoEntry = (state: BlurioStore, entry: UndoEntry | null): void => {
@@ -462,6 +557,9 @@ const buildTrackValuesFromTemplate = (
 
 export const useEditorStore = create<BlurioStore>((set, get) => ({
   projects: {},
+  folders: {
+    [DEFAULT_FOLDER_ID]: createDefaultFolder(),
+  },
   settings: { ...DEFAULT_SETTINGS },
   ui: emptyUIState(DEFAULT_SETTINGS),
   undoStack: [],
@@ -470,8 +568,19 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
   sharedTransition: null,
 
   initializeFromDisk: () => {
-    const projects = loadProjects();
+    const rawFolders = loadFolders();
+    const folders = ensureFolders(rawFolders);
+    const loadedProjects = loadProjects();
+    const normalizedProjects = sanitizeProjects(loadedProjects, folders);
+    const projects = normalizedProjects.projects;
     const settings = loadSettings();
+    if (Object.keys(rawFolders).length === 0) {
+      persistFolders(folders);
+    }
+    if (normalizedProjects.changed) {
+      persistProjects(projects);
+    }
+
     const ids = getSortedProjectIds(projects);
     const selectedProjectId = ids[0] ?? null;
     const selectedTrackId =
@@ -481,6 +590,7 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
 
     set({
       projects,
+      folders,
       settings,
       ui: {
         ...emptyUIState(settings),
@@ -545,7 +655,8 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
 
   createProjectFromVideo: (video, name) => {
     const state = get();
-    const project = createProject(video, state.settings.accentColor, name);
+    const folderId = getFallbackFolderId(state.folders);
+    const project = createProject(video, state.settings.accentColor, name, folderId);
     const previewQuality = isLargeVideo(video) ? 'smooth' : state.ui.previewQuality;
 
     const projects = {
@@ -575,7 +686,97 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
     }));
   },
 
+  renameProject: (projectId, name) => {
+    const normalized = normalizeProjectName(name);
+    set(state => ({
+      projects: updateProjectAndPersist(state.projects, projectId, project => ({
+        ...project,
+        name: normalized,
+      })),
+    }));
+  },
+
+  moveProjectToFolder: (projectId, folderId) => {
+    const state = get();
+    if (!state.folders[folderId]) {
+      return;
+    }
+
+    set({
+      projects: updateProjectAndPersist(state.projects, projectId, project =>
+        project.trashedAt !== null || project.folderId === folderId
+          ? project
+          : {
+              ...project,
+              folderId,
+            },
+      ),
+    });
+  },
+
   deleteProject: projectId => {
+    const state = get();
+    const project = state.projects[projectId];
+    if (!project || project.trashedAt !== null) {
+      return;
+    }
+
+    const projects = updateProjectAndPersist(state.projects, projectId, current => ({
+      ...current,
+      trashedAt: Date.now(),
+    }));
+
+    const nextSelectedId =
+      state.ui.selectedProjectId === projectId
+        ? getSortedProjectIds(projects)[0] ?? null
+        : state.ui.selectedProjectId;
+
+    const selectedTrackId =
+      nextSelectedId && projects[nextSelectedId]
+        ? projects[nextSelectedId].tracks[0]?.id ?? null
+        : null;
+
+    set({
+      projects,
+      ui: {
+        ...state.ui,
+        selectedProjectId: nextSelectedId,
+        selectedTrackId,
+      },
+    });
+  },
+
+  recoverProject: projectId => {
+    const state = get();
+    const project = state.projects[projectId];
+    if (!project || project.trashedAt === null) {
+      return;
+    }
+
+    const fallbackFolderId = getFallbackFolderId(state.folders);
+    const nextFolderId = state.folders[project.folderId] ? project.folderId : fallbackFolderId;
+    const projects = updateProjectAndPersist(state.projects, projectId, current => ({
+      ...current,
+      folderId: nextFolderId,
+      trashedAt: null,
+    }));
+    const shouldSelectRecovered = state.ui.selectedProjectId === null;
+
+    set({
+      projects,
+      ui: {
+        ...state.ui,
+        selectedProjectId: shouldSelectRecovered
+          ? projects[projectId]?.id ?? null
+          : state.ui.selectedProjectId,
+        selectedTrackId: shouldSelectRecovered
+          ? projects[projectId]?.tracks[0]?.id ?? null
+          : state.ui.selectedTrackId,
+      },
+    });
+  },
+
+  permanentlyDeleteProject: projectId => {
     const state = get();
     if (!state.projects[projectId]) {
       return;
@@ -605,14 +806,51 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
     });
   },
 
+  cleanTrash: () => {
+    const state = get();
+    const entries = Object.entries(state.projects).filter(([, project]) => project.trashedAt !== null);
+    if (entries.length === 0) {
+      return;
+    }
+
+    const projects = { ...state.projects };
+    entries.forEach(([projectId]) => {
+      delete projects[projectId];
+    });
+    persistProjects(projects);
+
+    const nextSelectedId =
+      state.ui.selectedProjectId && projects[state.ui.selectedProjectId]
+        ? state.ui.selectedProjectId
+        : getSortedProjectIds(projects)[0] ?? null;
+    const selectedTrackId =
+      nextSelectedId && projects[nextSelectedId]
+        ? projects[nextSelectedId].tracks[0]?.id ?? null
+        : null;
+
+    set({
+      projects,
+      ui: {
+        ...state.ui,
+        selectedProjectId: nextSelectedId,
+        selectedTrackId,
+      },
+    });
+  },
+
   duplicateProjectById: projectId => {
     const state = get();
     const project = state.projects[projectId];
-    if (!project) {
+    if (!project || project.trashedAt !== null) {
       return null;
     }
 
-    const duplicated = duplicateProject(project);
+    const fallbackFolderId = getFallbackFolderId(state.folders);
+    const duplicated = duplicateProject({
+      ...project,
+      folderId: state.folders[project.folderId] ? project.folderId : fallbackFolderId,
+      trashedAt: null,
+    });
     const projects = {
       ...state.projects,
       [duplicated.id]: duplicated,
@@ -623,12 +861,88 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
     return duplicated.id;
   },
 
+  createFolder: name => {
+    const state = get();
+    const timestamp = Date.now();
+    const nextFolder: ProjectFolder = {
+      id: createId('folder'),
+      name: normalizeFolderName(name),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+
+    const folders = {
+      ...state.folders,
+      [nextFolder.id]: nextFolder,
+    };
+
+    persistFolders(folders);
+    set({ folders });
+    return nextFolder.id;
+  },
+
+  renameFolder: (folderId, name) => {
+    const state = get();
+    const folder = state.folders[folderId];
+    if (!folder) {
+      return;
+    }
+
+    const normalized = normalizeFolderName(name, folder.name);
+    const folders = {
+      ...state.folders,
+      [folderId]: {
+        ...folder,
+        name: normalized,
+        updatedAt: Date.now(),
+      },
+    };
+
+    persistFolders(folders);
+    set({ folders });
+  },
+
+  removeFolder: folderId => {
+    const state = get();
+    if (!state.folders[folderId]) {
+      return;
+    }
+
+    const nextFolders = { ...state.folders };
+    delete nextFolders[folderId];
+
+    const normalizedFolders = ensureFolders(nextFolders);
+    const fallbackFolderId = getFallbackFolderId(normalizedFolders);
+    const nextProjects: Record<ID, Project> = {};
+    Object.entries(state.projects).forEach(([projectId, project]) => {
+      nextProjects[projectId] =
+        project.folderId === folderId
+          ? {
+              ...project,
+              folderId: fallbackFolderId,
+              updatedAt: Date.now(),
+            }
+          : project;
+    });
+
+    persistFolders(normalizedFolders);
+    persistProjects(nextProjects);
+
+    set({
+      folders: normalizedFolders,
+      projects: nextProjects,
+    });
+  },
+
   selectProject: projectId => {
     set(state => {
       const project = projectId ? state.projects[projectId] : null;
-      const selectedTrackId = project?.tracks[0]?.id ?? null;
+      const normalizedProject =
+        project && project.trashedAt === null ? project : null;
+      const nextProjectId = normalizedProject?.id ?? null;
+      const selectedTrackId = normalizedProject?.tracks[0]?.id ?? null;
       if (
-        state.ui.selectedProjectId === projectId &&
+        state.ui.selectedProjectId === nextProjectId &&
         state.ui.selectedTrackId === selectedTrackId &&
         state.ui.playheadMs === 0
       ) {
@@ -638,7 +952,7 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
       return {
         ui: {
           ...state.ui,
-          selectedProjectId: projectId,
+          selectedProjectId: nextProjectId,
           selectedTrackId,
           playheadMs: 0,
         },

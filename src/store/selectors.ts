@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useEditorStore } from './editorStore';
-import type { Project, RenderState, Track } from '../types';
+import type { Project, ProjectFolder, RenderState, Track } from '../types';
 import { buildRenderState } from '../utils/renderState';
 
 export const useSelectedProject = (): Project | null =>
@@ -10,7 +10,12 @@ export const useSelectedProject = (): Project | null =>
       return null;
     }
 
-    return state.projects[selectedId] ?? null;
+    const project = state.projects[selectedId] ?? null;
+    if (!project || project.trashedAt !== null) {
+      return null;
+    }
+
+    return project;
   });
 
 export const useSelectedTrack = (): Track | null =>
@@ -22,7 +27,10 @@ export const useSelectedTrack = (): Track | null =>
     }
 
     const project = state.projects[projectId];
-    return project?.tracks.find(track => track.id === trackId) ?? null;
+    if (!project || project.trashedAt !== null) {
+      return null;
+    }
+    return project.tracks.find(track => track.id === trackId) ?? null;
   });
 
 export const useProjectList = (): Project[] => {
@@ -31,6 +39,21 @@ export const useProjectList = (): Project[] => {
   return useMemo(
     () => Object.values(projects).sort((a, b) => b.updatedAt - a.updatedAt),
     [projects],
+  );
+};
+
+export const useActiveProjectList = (): Project[] =>
+  useProjectList().filter(project => project.trashedAt === null);
+
+export const useTrashProjectList = (): Project[] =>
+  useProjectList().filter(project => project.trashedAt !== null);
+
+export const useFolderList = (): ProjectFolder[] => {
+  const folders = useEditorStore(state => state.folders);
+
+  return useMemo(
+    () => Object.values(folders).sort((a, b) => a.createdAt - b.createdAt),
+    [folders],
   );
 };
 

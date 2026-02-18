@@ -11,6 +11,14 @@ export interface BlurioPreviewNativeProps {
   onPreviewError?: (message: string) => void;
 }
 
+export interface NativeContextMenuAction {
+  id: string;
+  title: string;
+  destructive?: boolean;
+  disabled?: boolean;
+  children?: NativeContextMenuAction[];
+}
+
 export interface ExportRequest {
   projectId: ID;
   sourceUri: string;

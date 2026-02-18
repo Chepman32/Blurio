@@ -117,11 +117,20 @@ export interface Project {
   name: string;
   createdAt: UnixMs;
   updatedAt: UnixMs;
+  folderId: ID;
+  trashedAt: UnixMs | null;
   thumbnailUri: string;
   accentColor: string;
   video: VideoMeta;
   tracks: Track[];
   exportPreset: ExportPreset;
+}
+
+export interface ProjectFolder {
+  id: ID;
+  name: string;
+  createdAt: UnixMs;
+  updatedAt: UnixMs;
 }
 
 export interface ProjectIndexItem {

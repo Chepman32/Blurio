@@ -10,7 +10,8 @@ import { GlassCard } from '../common/GlassCard';
 interface ProjectCardProps {
   project: Project;
   onPress: () => void;
-  onLongPress: () => void;
+  onLongPress?: () => void;
+  disabled?: boolean;
   accessibilityLabel: string;
 }
 
@@ -21,6 +22,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   project,
   onPress,
   onLongPress,
+  disabled = false,
   accessibilityLabel,
 }) => {
   const { colors } = useAppTheme();
@@ -34,9 +36,11 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
     <TouchableOpacity
       onPress={onPress}
       onLongPress={onLongPress}
+      disabled={disabled}
       accessibilityLabel={accessibilityLabel}
       accessibilityRole="button"
-      activeOpacity={0.9}>
+      activeOpacity={0.9}
+      style={disabled ? styles.disabledCard : undefined}>
       <GlassCard style={styles.card}>
         <View style={styles.row}>
           {project.thumbnailUri && !thumbFailed ? (
@@ -78,6 +82,9 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
 const styles = StyleSheet.create({
   card: {
     marginBottom: SPACING.md,
+  },
+  disabledCard: {
+    opacity: 0.7,
   },
   row: {
     flexDirection: 'row',

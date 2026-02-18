@@ -11,3 +11,10 @@ RCT_EXPORT_VIEW_PROPERTY(onTimeSync, RCTBubblingEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onPreviewError, RCTBubblingEventBlock)
 
 @end
+
+@interface RCT_EXTERN_MODULE(BlurioContextMenuView, RCTViewManager)
+
+RCT_EXPORT_VIEW_PROPERTY(menuItems, NSString)
+RCT_EXPORT_VIEW_PROPERTY(onPressMenuItem, RCTBubblingEventBlock)
+
+@end

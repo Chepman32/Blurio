@@ -73,6 +73,7 @@ export const createProject = (
   video: VideoMeta,
   accentColor: string,
   providedName?: string,
+  folderId = 'folder-default',
 ): Project => {
   const id = createId('project');
   const timestamp = Date.now();
@@ -82,6 +83,8 @@ export const createProject = (
     name: providedName ?? `Project ${new Date(timestamp).toLocaleDateString()}`,
     createdAt: timestamp,
     updatedAt: timestamp,
+    folderId,
+    trashedAt: null,
     thumbnailUri: video.thumbnailUris[0] ?? '',
     accentColor,
     video,
@@ -103,6 +106,7 @@ export const duplicateProject = (project: Project): Project => {
     name: `${project.name} copy`,
     createdAt: timestamp,
     updatedAt: timestamp,
+    trashedAt: null,
     tracks: project.tracks.map(track => duplicateTrack(track)),
     video: {
       ...project.video,
