@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Circle } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ACCENT_COLORS,
   SPACING,
@@ -41,6 +42,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
 
 export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
 
   const settings = useEditorStore(state => state.settings);
   const setAppearance = useEditorStore(state => state.setAppearance);
@@ -68,9 +70,13 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <GradientBackground>
-      <View style={styles.container}>
-        <AppText variant="title">{STRINGS.navigation.settingsTitle}</AppText>
-
+      <View
+        style={[
+          styles.container,
+          {
+            paddingTop: insets.top + SPACING.sm,
+          },
+        ]}>
         <ScrollView
           style={styles.scrollArea}
           contentContainerStyle={styles.scrollContent}
@@ -214,12 +220,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.xl,
     paddingBottom: SPACING.md,
   },
   scrollArea: {
     flex: 1,
-    marginTop: SPACING.md,
+    marginTop: SPACING.sm,
   },
   scrollContent: {
     gap: SPACING.sm,

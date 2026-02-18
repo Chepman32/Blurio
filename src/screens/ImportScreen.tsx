@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { BlurButton, GradientBackground, ShimmerOverlay, AppText } from '../components/common';
 import { SPACING, STRINGS } from '../constants';
@@ -25,6 +26,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Import'>;
 
 export const ImportScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useAppTheme();
+  const headerHeight = useHeaderHeight();
   const createProjectFromVideo = useEditorStore(state => state.createProjectFromVideo);
   const setUnsupportedVideoPromptVisible = useEditorStore(
     state => state.setUnsupportedVideoPromptVisible,
@@ -36,6 +38,7 @@ export const ImportScreen: React.FC<Props> = ({ navigation }) => {
   const [failedThumbs, setFailedThumbs] = useState<Record<string, boolean>>({});
   const pickTokenRef = useRef(0);
   const isPickingRef = useRef(false);
+  const isDoneDisabled = preparing || !videoMeta;
 
   const pickVideo = useCallback(async () => {
     if (isPickingRef.current) {
@@ -136,9 +139,13 @@ export const ImportScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <GradientBackground>
-      <View style={styles.container}>
-        <AppText variant="title">{STRINGS.navigation.importTitle}</AppText>
-
+      <View
+        style={[
+          styles.container,
+          {
+            paddingTop: headerHeight + SPACING.sm,
+          },
+        ]}>
         <BlurButton
           label={STRINGS.import.pickButton}
           onPress={pickVideo}
@@ -232,10 +239,15 @@ export const ImportScreen: React.FC<Props> = ({ navigation }) => {
 
         <BlurButton
           label={STRINGS.import.doneButton}
-          disabled={preparing || !videoMeta}
+          disabled={isDoneDisabled}
           onPress={openEditor}
           accessibilityLabel={STRINGS.import.doneButton}
-          style={styles.doneButton}
+          style={[
+            styles.doneButton,
+            !isDoneDisabled
+              ? { backgroundColor: colors.success }
+              : null,
+          ]}
         />
       </View>
     </GradientBackground>
@@ -246,11 +258,10 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.xxl,
     gap: SPACING.md,
   },
   pickButton: {
-    marginTop: SPACING.sm,
+    marginTop: SPACING.xs,
   },
   previewCard: {
     borderRadius: 16,

@@ -416,7 +416,13 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
 
   return (
     <GradientBackground>
-      <View style={styles.container}>
+      <View
+        style={[
+          styles.container,
+          {
+            paddingTop: insets.top + SPACING.sm,
+          },
+        ]}>
         <View style={styles.header}>
           <AppText variant="title">{STRINGS.navigation.homeTitle}</AppText>
           <TouchableOpacity
@@ -483,7 +489,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.xl,
     paddingBottom: SPACING.md,
   },
   header: {

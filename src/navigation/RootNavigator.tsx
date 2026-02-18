@@ -83,7 +83,7 @@ export const RootNavigator: React.FC = () => {
           component={EditorScreen}
           options={{
             title: STRINGS.navigation.editorTitle,
-            headerShown: false,
+            headerShown: true,
           }}
         />
         <Stack.Screen

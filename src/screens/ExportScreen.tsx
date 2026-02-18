@@ -6,6 +6,7 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { ChevronDown } from 'lucide-react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ActionSheetModal,
   AppText,
@@ -41,6 +42,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Export'>;
 
 export const ExportScreen: React.FC<Props> = ({ navigation, route }) => {
   const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
 
   const project = useEditorStore(state => state.projects[route.params.projectId] ?? null);
   const renderState = useCurrentRenderState();
@@ -193,7 +195,13 @@ export const ExportScreen: React.FC<Props> = ({ navigation, route }) => {
 
   return (
     <GradientBackground>
-      <View style={styles.container}>
+      <View
+        style={[
+          styles.container,
+          {
+            paddingTop: insets.top + SPACING.sm,
+          },
+        ]}>
         <TouchableOpacity
           accessibilityLabel={STRINGS.export.toggleSettings}
           onPress={() => setSettingsExpanded(prev => !prev)}
@@ -316,7 +324,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingHorizontal: SPACING.md,
-    paddingTop: SPACING.xl,
     paddingBottom: SPACING.lg,
     gap: SPACING.md,
   },

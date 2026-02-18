@@ -9,9 +9,9 @@ import {
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
+import { useHeaderHeight } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
-  ArrowLeft,
   Layers,
   Pause,
   Play,
@@ -85,6 +85,7 @@ const templateTypeLabel = (type: RegionType): string => {
 export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
+  const headerHeight = useHeaderHeight();
   const { tick, impact, warning } = useHaptics();
 
   const project = useSelectedProject();
@@ -482,17 +483,12 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
         style={[
           styles.container,
           {
-            paddingTop: insets.top + SPACING.sm,
+            paddingTop: headerHeight + SPACING.xs,
             paddingBottom: Math.max(insets.bottom + SPACING.xs, SPACING.md),
           },
         ]}>
         <View style={styles.header}>
-          <TouchableOpacity
-            accessibilityLabel={STRINGS.common.back}
-            onPress={() => navigation.goBack()}
-            style={[styles.topButton, { borderColor: colors.cardBorder }]}> 
-            <ArrowLeft size={18} color={colors.textPrimary} />
-          </TouchableOpacity>
+          <View style={styles.leftSpacer} />
 
           <View style={styles.headerActionsWrap}>
             <ScrollView
@@ -913,6 +909,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
+  },
+  leftSpacer: {
+    width: 42,
+    height: 42,
   },
   headerActionsWrap: {
     flex: 1,
