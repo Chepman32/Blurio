@@ -32,6 +32,7 @@ import {
   MAX_SHEET_HEIGHT,
   MID_SHEET_HEIGHT,
   MIN_SHEET_HEIGHT,
+  DEFAULT_KEYFRAME_VALUES,
   SPACING,
   STRINGS,
 } from '../constants';
@@ -208,6 +209,11 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
   }, [renderState, ui.selectedTrackId]);
 
   const selectedBlendMode = selectedTrack?.blendMode ?? null;
+  const selectedStrengthValue = selectedTrackValues?.strength;
+  const selectedStrength =
+    typeof selectedStrengthValue === 'number' && Number.isFinite(selectedStrengthValue)
+    ? selectedStrengthValue
+    : DEFAULT_KEYFRAME_VALUES.strength;
 
   if (!project || !renderState) {
     return (
@@ -227,6 +233,13 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
             onAddRegion={(type, template) => {
               addTrack(type, template);
               impact();
+            }}
+            strength={selectedStrength}
+            onChangeStrength={strength => {
+              if (!Number.isFinite(strength)) {
+                return;
+              }
+              updateSelectedTrackValuesAtPlayhead({ strength });
             }}
           />
         );

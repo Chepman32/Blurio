@@ -30,17 +30,25 @@ export const AnimatedSlider: React.FC<AnimatedSliderProps> = ({
 }) => {
   const { colors } = useAppTheme();
   const [trackWidth, setTrackWidth] = useState(0);
+  const [isDragging, setIsDragging] = useState(false);
   const progress = useSharedValue(0);
   const context = useSharedValue(0);
   const active = useSharedValue(0);
+  const safeValue = Number.isFinite(value) ? clamp(value, min, max) : min;
+  const range = max - min;
+  const safeRange = range === 0 ? 1 : range;
 
   useEffect(() => {
-    const normalized = clamp((value - min) / (max - min), 0, 1);
+    if (isDragging) {
+      return;
+    }
+
+    const normalized = clamp((safeValue - min) / safeRange, 0, 1);
     progress.value = withSpring(normalized, {
       damping: 15,
       stiffness: 190,
     });
-  }, [max, min, progress, value]);
+  }, [isDragging, min, progress, safeRange, safeValue]);
 
   const onLayout = (event: LayoutChangeEvent) => {
     const width = event.nativeEvent.layout.width;
@@ -51,6 +59,7 @@ export const AnimatedSlider: React.FC<AnimatedSliderProps> = ({
     .onStart(() => {
       context.value = progress.value;
       active.value = 1;
+      runOnJS(setIsDragging)(true);
     })
     .onUpdate(event => {
       if (trackWidth <= 0) {
@@ -60,10 +69,14 @@ export const AnimatedSlider: React.FC<AnimatedSliderProps> = ({
       const delta = event.translationX / trackWidth;
       const next = clamp(context.value + delta, 0, 1);
       progress.value = next;
-      runOnJS(onChange)(min + (max - min) * next);
+      const nextValue = min + range * next;
+      if (Number.isFinite(nextValue)) {
+        runOnJS(onChange)(nextValue);
+      }
     })
-    .onEnd(() => {
+    .onFinalize(() => {
       active.value = 0;
+      runOnJS(setIsDragging)(false);
     });
 
   const fillStyle = useAnimatedStyle(() => ({
@@ -89,13 +102,19 @@ export const AnimatedSlider: React.FC<AnimatedSliderProps> = ({
           {label}
         </AppText>
         <AppText variant="micro" color={colors.textMuted}>
-          {Math.round(value * 100)}
+          {Math.round(safeValue * 100)}
         </AppText>
       </View>
       <GestureDetector gesture={pan}>
         <View style={[styles.track, { backgroundColor: colors.cardBorder }]} onLayout={onLayout}>
           <Animated.View style={[styles.fill, { backgroundColor: colors.accent }, fillStyle]} />
-          <Animated.View style={[styles.knob, { backgroundColor: colors.accent }, knobStyle]} />
+          <Animated.View
+            style={[
+              styles.knob,
+              { backgroundColor: colors.sheet, borderColor: colors.accent },
+              knobStyle,
+            ]}
+          />
         </View>
       </GestureDetector>
     </View>
@@ -126,5 +145,6 @@ const styles = StyleSheet.create({
     width: 22,
     height: 22,
     borderRadius: 12,
+    borderWidth: 2,
   },
 });

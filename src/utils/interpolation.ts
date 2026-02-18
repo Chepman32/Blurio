@@ -23,9 +23,12 @@ const PARAMS: KeyframeParameter[] = [
   'cornerRadius',
 ];
 
+const readFinite = (value: unknown, fallback: number): number =>
+  typeof value === 'number' && Number.isFinite(value) ? value : fallback;
+
 const hasParamValue = (keyframe: Keyframe, parameter: KeyframeParameter): boolean =>
-  Boolean(keyframe.parameterMask[parameter]) &&
-  typeof keyframe.values[parameter] === 'number';
+  keyframe.parameterMask?.[parameter] !== false &&
+  Number.isFinite(keyframe.values[parameter]);
 
 const resolveValueAroundTime = (
   sorted: Keyframe[],
@@ -88,17 +91,17 @@ const resolveParamValue = (
   }
 
   if (previous && !next) {
-    return previous.values[parameter] ?? fallback;
+    return readFinite(previous.values[parameter], fallback);
   }
 
   if (!previous && next) {
-    return next.values[parameter] ?? fallback;
+    return readFinite(next.values[parameter], fallback);
   }
 
   const prev = previous as Keyframe;
   const nextFrame = next as Keyframe;
-  const previousValue = prev.values[parameter] ?? fallback;
-  const nextValue = nextFrame.values[parameter] ?? previousValue;
+  const previousValue = readFinite(prev.values[parameter], fallback);
+  const nextValue = readFinite(nextFrame.values[parameter], previousValue);
   const duration = Math.max(nextFrame.timeMs - prev.timeMs, 1);
   const rawProgress = (timeMs - prev.timeMs) / duration;
   const t = interpolationProgress(prev.interpolation, rawProgress);

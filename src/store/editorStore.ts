@@ -244,10 +244,47 @@ const findKeyframeAtPlayhead = (
   return exact ?? null;
 };
 
+const sanitizeKeyframePartial = (
+  partial: Partial<KeyframeValues>,
+): Partial<KeyframeValues> => {
+  const sanitized: Partial<KeyframeValues> = {};
+
+  for (const [parameter, value] of Object.entries(partial) as Array<
+    [keyof KeyframeValues, number | undefined]
+  >) {
+    if (typeof value === 'number' && Number.isFinite(value)) {
+      sanitized[parameter] = value;
+    }
+  }
+
+  return sanitized;
+};
+
+const buildParameterMaskForPartial = (
+  mask: Record<KeyframeParameter, boolean> | undefined,
+  partial: Partial<KeyframeValues>,
+): Record<KeyframeParameter, boolean> => {
+  const nextMask: Record<KeyframeParameter, boolean> = {
+    ...DEFAULT_KEYFRAME_PARAM_MASK,
+    ...mask,
+  };
+
+  for (const parameter of Object.keys(partial) as KeyframeParameter[]) {
+    nextMask[parameter] = true;
+  }
+
+  return nextMask;
+};
+
 const applySelectedTrackValuesAtPlayhead = (
   state: Pick<BlurioStore, 'projects' | 'ui'>,
   partial: Partial<KeyframeValues>,
 ): { projects: Record<ID, Project>; projectId: ID } | null => {
+  const safePartial = sanitizeKeyframePartial(partial);
+  if (Object.keys(safePartial).length === 0) {
+    return null;
+  }
+
   const project = findSelectedProject(state);
   const selectedTrackId = state.ui.selectedTrackId;
   if (!project || !selectedTrackId) {
@@ -276,8 +313,12 @@ const applySelectedTrackValuesAtPlayhead = (
                   ...keyframe,
                   values: {
                     ...keyframe.values,
-                    ...partial,
+                    ...safePartial,
                   },
+                  parameterMask: buildParameterMaskForPartial(
+                    keyframe.parameterMask,
+                    safePartial,
+                  ),
                 }
               : keyframe,
           ),
@@ -286,7 +327,7 @@ const applySelectedTrackValuesAtPlayhead = (
 
       const values = {
         ...interpolateTrackValuesAtTime(candidate, state.ui.playheadMs),
-        ...partial,
+        ...safePartial,
       };
 
       const keyframe: Keyframe = {
@@ -295,9 +336,10 @@ const applySelectedTrackValuesAtPlayhead = (
         interpolation: state.ui.interpolationPickerValue,
         values,
         createdAt: Date.now(),
-        parameterMask: {
-          ...state.ui.enabledKeyframeParams,
-        },
+        parameterMask: buildParameterMaskForPartial(
+          state.ui.enabledKeyframeParams,
+          safePartial,
+        ),
       };
 
       return {

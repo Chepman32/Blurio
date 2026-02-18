@@ -6,12 +6,19 @@ import type { RegionType } from '../../../types';
 import { useAppTheme } from '../../../theme';
 import { BlurButton } from '../../common/BlurButton';
 import { IconActionButton } from '../../common/IconActionButton';
+import { AnimatedSlider } from '../AnimatedSlider';
 
 interface AddRegionPanelProps {
   onAddRegion: (type: RegionType, template?: 'face' | 'plate') => void;
+  strength: number;
+  onChangeStrength: (strength: number) => void;
 }
 
-export const AddRegionPanel: React.FC<AddRegionPanelProps> = ({ onAddRegion }) => {
+export const AddRegionPanel: React.FC<AddRegionPanelProps> = ({
+  onAddRegion,
+  strength,
+  onChangeStrength,
+}) => {
   const { colors } = useAppTheme();
 
   return (
@@ -66,6 +73,12 @@ export const AddRegionPanel: React.FC<AddRegionPanelProps> = ({ onAddRegion }) =
           onPress={() => onAddRegion('roundedRect')}
           accessibilityLabel={STRINGS.editor.addRegion}
         />
+        <AnimatedSlider
+          label={STRINGS.params.strength}
+          value={strength}
+          onChange={onChangeStrength}
+          accessibilityLabel={STRINGS.params.strength}
+        />
       </View>
     </View>
   );
@@ -92,5 +105,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 12,
     padding: SPACING.sm,
+    gap: SPACING.sm,
   },
 });
