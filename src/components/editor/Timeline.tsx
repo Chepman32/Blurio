@@ -528,7 +528,7 @@ const styles = StyleSheet.create({
     height: 44,
   },
   thumbnail: {
-    width: 48,
+    flex: 1,
     height: 44,
   },
   thumbnailPlaybackOverlay: {

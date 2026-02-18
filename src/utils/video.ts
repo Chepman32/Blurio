@@ -204,7 +204,7 @@ export const generateVideoThumbnails = async (
   const thumbnails: string[] = [];
   const boundedCount = Math.max(1, Math.min(count, 20));
   const safeDurationMs = Math.max(durationMs, 1);
-  const stepMs = safeDurationMs / (boundedCount + 1);
+  const stepMs = safeDurationMs / boundedCount;
   const normalizedPersistKey =
     persistKey && persistKey.trim().length > 0
       ? persistKey
@@ -212,7 +212,7 @@ export const generateVideoThumbnails = async (
 
   for (let index = 0; index < boundedCount; index += 1) {
     try {
-      const frameTimeMs = Math.round(stepMs * (index + 1));
+      const frameTimeMs = Math.round(stepMs * (index + 0.5));
       const thumbnailSourceUrl = isLocalFileUri(sourceUri)
         ? toLocalPath(sourceUri)
         : sourceUri;
