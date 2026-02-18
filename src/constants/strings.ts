@@ -34,7 +34,6 @@ export const STRINGS = {
     settingsTitle: 'Settings',
   },
   home: {
-    createCta: 'Import Video',
     openSettings: 'Open settings',
     emptyTitle: 'No projects yet',
     emptyBody: 'Import a video to start building blur tracks.',

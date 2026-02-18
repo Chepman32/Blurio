@@ -133,13 +133,6 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           />
         )}
 
-        <BlurButton
-          label={STRINGS.home.createCta}
-          onPress={() => navigation.navigate('Import')}
-          accessibilityLabel={STRINGS.accessibility.importButton}
-          style={styles.importButton}
-        />
-
         <ActionSheetModal
           visible={Boolean(contextProject)}
           title={STRINGS.home.contextTitle}
@@ -194,13 +187,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   listContent: {
-    paddingBottom: 96,
-  },
-  importButton: {
-    position: 'absolute',
-    left: SPACING.md,
-    right: SPACING.md,
-    bottom: SPACING.md,
+    paddingBottom: SPACING.md,
   },
   emptyWrap: {
     flex: 1,
