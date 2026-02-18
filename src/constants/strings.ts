@@ -38,6 +38,7 @@ export const STRINGS = {
     emptyTitle: 'No projects yet',
     emptyBody: 'Import a video to start building blur tracks.',
     emptyButton: 'Create First Project',
+    createProjectFab: 'Create new project',
     contextTitle: 'Project Actions',
     longPressHint: 'Long press for project actions',
     duplicateAction: 'Duplicate project',
@@ -97,6 +98,8 @@ export const STRINGS = {
     applyTemplateTitle: 'Apply Template',
     noTemplatesYet: 'No saved templates yet.',
     removeAllRegions: 'Remove All Regions',
+    playPreview: 'Play Preview',
+    pausePreview: 'Pause Preview',
   },
   params: {
     strength: 'Strength',

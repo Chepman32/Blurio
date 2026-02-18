@@ -108,7 +108,7 @@ export const RegionOverlay: React.FC<RegionOverlayProps> = ({
   height,
   liveWidthPx,
   liveHeightPx,
-  isGesturing,
+  isGesturing: _isGesturing,
   resizeStartWorklet,
   resizeUpdateWorklet,
   resizeEndWorklet,
@@ -172,14 +172,6 @@ export const RegionOverlay: React.FC<RegionOverlayProps> = ({
 
   const borderStyle = track.type === 'path' ? 'dashed' : 'solid';
 
-  // Animated rotation handle position from live width
-  const rotationHandleStyle = useAnimatedStyle(() => {
-    const w = liveWidthPx ? liveWidthPx.value : width;
-    return {
-      left: w / 2 - HANDLE_SIZE / 2,
-    };
-  });
-
   return (
     <Animated.View
       pointerEvents={interactiveHandles ? 'box-none' : 'none'}
@@ -227,15 +219,6 @@ export const RegionOverlay: React.FC<RegionOverlayProps> = ({
             />
           )
         ))}
-        <Animated.View
-          style={[
-            styles.rotationHandle,
-            rotationHandleStyle,
-            {
-              backgroundColor: colors.accent,
-            },
-          ]}
-        />
       </Animated.View>
     </Animated.View>
   );
@@ -251,12 +234,5 @@ const styles = StyleSheet.create({
     width: HANDLE_SIZE,
     height: HANDLE_SIZE,
     borderRadius: 8,
-  },
-  rotationHandle: {
-    position: 'absolute',
-    top: -28,
-    width: HANDLE_SIZE,
-    height: HANDLE_SIZE,
-    borderRadius: 999,
   },
 });

@@ -10,7 +10,17 @@ import {
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Layers, PlusSquare, Redo2, Share2, Trash2, Undo2 } from 'lucide-react-native';
+import {
+  ArrowLeft,
+  Layers,
+  Pause,
+  Play,
+  PlusSquare,
+  Redo2,
+  Share2,
+  Trash2,
+  Undo2,
+} from 'lucide-react-native';
 import Animated, {
   runOnJS,
   useAnimatedStyle,
@@ -101,9 +111,6 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
   const toggleTrackVisibility = useEditorStore(state => state.toggleTrackVisibility);
   const toggleTrackLock = useEditorStore(state => state.toggleTrackLock);
   const reorderTracks = useEditorStore(state => state.reorderTracks);
-  const updateSelectedTrackValuesAtPlayhead = useEditorStore(
-    state => state.updateSelectedTrackValuesAtPlayhead,
-  );
   const updateSelectedTrackValuesLive = useEditorStore(
     state => state.updateSelectedTrackValuesLive,
   );
@@ -114,6 +121,7 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
     state => state.endTrackValueInteraction,
   );
   const setTrackBlendMode = useEditorStore(state => state.setTrackBlendMode);
+  const setTrackTimeRange = useEditorStore(state => state.setTrackTimeRange);
   const addKeyframeAtPlayhead = useEditorStore(state => state.addKeyframeAtPlayhead);
   const deleteKeyframeAtPlayhead = useEditorStore(state => state.deleteKeyframeAtPlayhead);
   const setInterpolationPicker = useEditorStore(state => state.setInterpolationPicker);
@@ -264,6 +272,7 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
     () => [...regionTemplates].sort((a, b) => b.updatedAt - a.updatedAt),
     [regionTemplates],
   );
+  const canSaveTemplate = templateName.trim().length > 0;
   const templateCategories = useMemo(() => {
     const dynamic = regionTemplates
       .map(template => template.category.trim())
@@ -390,12 +399,14 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
             }}
             hasSelection={Boolean(selectedTrack)}
             strength={selectedStrength}
+            onStrengthChangeStart={beginTrackValueInteraction}
             onChangeStrength={strength => {
               if (!Number.isFinite(strength)) {
                 return;
               }
-              updateSelectedTrackValuesAtPlayhead({ strength });
+              updateSelectedTrackValuesLive({ strength });
             }}
+            onStrengthChangeEnd={endTrackValueInteraction}
           />
         );
       case 'regions':
@@ -418,7 +429,9 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
           <ParamsPanel
             values={selectedTrackValues}
             blendMode={selectedBlendMode}
-            onChangeValues={updateSelectedTrackValuesAtPlayhead}
+            onChangeValues={updateSelectedTrackValuesLive}
+            onBeginValueChange={beginTrackValueInteraction}
+            onEndValueChange={endTrackValueInteraction}
             onChangeBlendMode={blendMode => {
               if (selectedTrack) {
                 setTrackBlendMode(selectedTrack.id, blendMode);
@@ -505,6 +518,30 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
                     style={[styles.headerActionButton, { borderColor: colors.cardBorder }]}>
                     <Trash2 size={16} color={colors.destructive} />
                   </TouchableOpacity>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={STRINGS.editor.undo}
+                    disabled={!canUndo}
+                    onPress={undo}
+                    style={[
+                      styles.headerActionButton,
+                      { borderColor: colors.cardBorder },
+                      !canUndo ? styles.headerActionDisabled : null,
+                    ]}>
+                    <Undo2 size={16} color={colors.textPrimary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={STRINGS.editor.redo}
+                    disabled={!canRedo}
+                    onPress={redo}
+                    style={[
+                      styles.headerActionButton,
+                      { borderColor: colors.cardBorder },
+                      !canRedo ? styles.headerActionDisabled : null,
+                    ]}>
+                    <Redo2 size={16} color={colors.textPrimary} />
+                  </TouchableOpacity>
                 </>
               ) : (
                 <>
@@ -559,12 +596,28 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
             </ScrollView>
           </View>
 
-          <TouchableOpacity
-            accessibilityLabel={STRINGS.common.export}
-            onPress={() => navigation.navigate('Export', { projectId: project.id })}
-            style={[styles.topButton, { borderColor: colors.cardBorder }]}> 
-            <Share2 size={18} color={colors.textPrimary} />
-          </TouchableOpacity>
+          <View style={styles.headerRightActions}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={
+                paused ? STRINGS.editor.playPreview : STRINGS.editor.pausePreview
+              }
+              onPress={() => setPaused(current => !current)}
+              style={[styles.topButton, { borderColor: colors.cardBorder }]}>
+              {paused ? (
+                <Play size={18} color={colors.textPrimary} />
+              ) : (
+                <Pause size={18} color={colors.textPrimary} />
+              )}
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              accessibilityLabel={STRINGS.common.export}
+              onPress={() => navigation.navigate('Export', { projectId: project.id })}
+              style={[styles.topButton, { borderColor: colors.cardBorder }]}>
+              <Share2 size={18} color={colors.textPrimary} />
+            </TouchableOpacity>
+          </View>
         </View>
 
         <Animated.View style={[styles.canvasWrap, appearStyle]}>
@@ -599,6 +652,7 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
           onExpandedChange={setTimelineExpanded}
           onPrecisionModeChange={setTimelinePrecisionMode}
           onMarkerLongPress={(trackId, keyframeId) => setMarkerContext({ trackId, keyframeId })}
+          onTrackRangeChange={setTrackTimeRange}
         />
 
         <ToolDock
@@ -728,7 +782,11 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
                 <TouchableOpacity
                   accessibilityRole="button"
                   accessibilityLabel={STRINGS.common.save}
+                  disabled={!canSaveTemplate}
                   onPress={() => {
+                    if (!canSaveTemplate) {
+                      return;
+                    }
                     saveSelectedTrackAsTemplate(templateName, templateCategory);
                     impact();
                     closeSaveTemplateModal();
@@ -736,6 +794,7 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
                   style={[
                     styles.modalActionButton,
                     { borderColor: colors.cardBorder, backgroundColor: colors.accent },
+                    !canSaveTemplate ? styles.modalActionDisabled : null,
                   ]}>
                   <AppText variant="section" color="#FFFFFF">
                     {STRINGS.common.save}
@@ -876,6 +935,10 @@ const styles = StyleSheet.create({
   headerActionDisabled: {
     opacity: 0.45,
   },
+  headerRightActions: {
+    flexDirection: 'row',
+    gap: SPACING.xs,
+  },
   canvasWrap: {
     flex: 1,
     minHeight: 220,
@@ -936,6 +999,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: SPACING.sm,
+  },
+  modalActionDisabled: {
+    opacity: 0.5,
   },
   templateList: {
     maxHeight: 240,

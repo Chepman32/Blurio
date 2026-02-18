@@ -10,6 +10,8 @@ interface ParamsPanelProps {
   values: KeyframeValues | null;
   blendMode: BlendMode | null;
   onChangeValues: (partial: Partial<KeyframeValues>) => void;
+  onBeginValueChange?: () => void;
+  onEndValueChange?: () => void;
   onChangeBlendMode: (blendMode: BlendMode) => void;
 }
 
@@ -17,6 +19,8 @@ export const ParamsPanel: React.FC<ParamsPanelProps> = ({
   values,
   blendMode,
   onChangeValues,
+  onBeginValueChange,
+  onEndValueChange,
   onChangeBlendMode,
 }) => {
   if (!values || !blendMode) {
@@ -35,24 +39,32 @@ export const ParamsPanel: React.FC<ParamsPanelProps> = ({
         label={STRINGS.params.strength}
         value={values.strength}
         onChange={next => onChangeValues({ strength: next })}
+        onChangeStart={onBeginValueChange}
+        onChangeEnd={onEndValueChange}
         accessibilityLabel={STRINGS.params.strength}
       />
       <AnimatedSlider
         label={STRINGS.params.feather}
         value={values.feather}
         onChange={next => onChangeValues({ feather: next })}
+        onChangeStart={onBeginValueChange}
+        onChangeEnd={onEndValueChange}
         accessibilityLabel={STRINGS.params.feather}
       />
       <AnimatedSlider
         label={STRINGS.params.opacity}
         value={values.opacity}
         onChange={next => onChangeValues({ opacity: next })}
+        onChangeStart={onBeginValueChange}
+        onChangeEnd={onEndValueChange}
         accessibilityLabel={STRINGS.params.opacity}
       />
       <AnimatedSlider
         label={STRINGS.params.cornerRadius}
         value={values.cornerRadius}
         onChange={next => onChangeValues({ cornerRadius: next })}
+        onChangeStart={onBeginValueChange}
+        onChangeEnd={onEndValueChange}
         accessibilityLabel={STRINGS.params.cornerRadius}
       />
       <SegmentedControl

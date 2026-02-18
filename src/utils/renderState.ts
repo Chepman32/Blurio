@@ -1,16 +1,37 @@
 import type { Project, RenderState, RenderStateTrack, Track } from '../types';
 import { interpolateTrackValuesAtTime } from './interpolation';
 
-const toRenderTrack = (track: Track, playheadMs: number): RenderStateTrack => ({
-  id: track.id,
-  visible: track.visible,
-  locked: track.locked,
-  blendMode: track.blendMode,
-  type: track.type,
-  zIndex: track.zIndex,
-  values: interpolateTrackValuesAtTime(track, playheadMs),
-  pathPoints: track.pathPoints.map(point => ({ ...point })),
-});
+const getTrackRange = (
+  track: Track,
+): {
+  startMs: number;
+  endMs: number;
+} => {
+  const startMs = Number.isFinite(track.startMs) ? Math.max(0, track.startMs as number) : 0;
+  const endCandidate = Number.isFinite(track.endMs)
+    ? Math.max(0, track.endMs as number)
+    : Number.POSITIVE_INFINITY;
+  return {
+    startMs,
+    endMs: Math.max(startMs, endCandidate),
+  };
+};
+
+const toRenderTrack = (track: Track, playheadMs: number): RenderStateTrack => {
+  const range = getTrackRange(track);
+  const inRange = playheadMs >= range.startMs && playheadMs <= range.endMs;
+
+  return {
+    id: track.id,
+    visible: track.visible && inRange,
+    locked: track.locked,
+    blendMode: track.blendMode,
+    type: track.type,
+    zIndex: track.zIndex,
+    values: interpolateTrackValuesAtTime(track, playheadMs),
+    pathPoints: track.pathPoints.map(point => ({ ...point })),
+  };
+};
 
 export const buildRenderState = (
   project: Project,

@@ -67,6 +67,8 @@ export interface Track {
   id: ID;
   name: string;
   type: RegionType;
+  startMs?: UnixMs;
+  endMs?: UnixMs;
   visible: boolean;
   locked: boolean;
   muted: boolean;

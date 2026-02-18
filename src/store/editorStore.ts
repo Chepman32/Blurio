@@ -35,7 +35,7 @@ import {
   saveProjects,
   saveSettings,
 } from '../utils/storage';
-import { isLargeVideo } from '../utils/video';
+import { isLargeVideo, restoreVideoMetaFiles } from '../utils/video';
 
 interface SharedTransitionState {
   projectId: ID;
@@ -69,6 +69,7 @@ interface BlurioStore {
   toggleTrackVisibility: (trackId: ID) => void;
   toggleTrackLock: (trackId: ID) => void;
   setTrackBlendMode: (trackId: ID, blendMode: Track['blendMode']) => void;
+  setTrackTimeRange: (trackId: ID, startMs: number, endMs: number) => void;
   renameTrack: (trackId: ID, name: string) => void;
   setPlayhead: (timeMs: number, withSnap?: boolean) => void;
   setTimelineZoom: (zoom: number) => void;
@@ -160,10 +161,14 @@ const persistSettings = (settings: StoredSettings): void => {
 
 const maxUndoEntries = 80;
 const EPSILON = 0.0001;
+const MIN_TRACK_DURATION_MS = 80;
 let trackValueInteractionDepth = 0;
 let trackValueInteractionSnapshot: UndoEntry | null = null;
 
 const approxEqual = (a: number, b: number): boolean => Math.abs(a - b) <= EPSILON;
+
+const sameUriList = (left: string[], right: string[]): boolean =>
+  left.length === right.length && left.every((value, index) => value === right[index]);
 
 const updateProjectAndPersist = (
   projects: Record<ID, Project>,
@@ -235,6 +240,28 @@ const pushUndoEntry = (state: BlurioStore, entry: UndoEntry | null): void => {
     state.undoStack.shift();
   }
   state.redoStack = [];
+};
+
+const getTrackRange = (
+  track: Track,
+  durationMs: number,
+): {
+  startMs: number;
+  endMs: number;
+} => {
+  const safeDuration = Math.max(0, durationMs);
+  const rawStart = Number.isFinite(track.startMs) ? (track.startMs as number) : 0;
+  const rawEnd = Number.isFinite(track.endMs) ? (track.endMs as number) : safeDuration;
+
+  let startMs = Math.max(0, Math.min(rawStart, safeDuration));
+  let endMs = Math.max(startMs, Math.min(rawEnd, safeDuration));
+
+  if (endMs - startMs < MIN_TRACK_DURATION_MS) {
+    endMs = Math.min(safeDuration, startMs + MIN_TRACK_DURATION_MS);
+    startMs = Math.max(0, endMs - MIN_TRACK_DURATION_MS);
+  }
+
+  return { startMs, endMs };
 };
 
 const findKeyframeAtPlayhead = (
@@ -463,6 +490,57 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
       },
       bootstrapCompleted: true,
     });
+
+    (async () => {
+      const repairedEntries = await Promise.all(
+        Object.values(projects).map(async project => ({
+          projectId: project.id,
+          video: await restoreVideoMetaFiles(project.video),
+        })),
+      );
+
+      set(state => {
+        let changed = false;
+        const nextProjects: Record<ID, Project> = { ...state.projects };
+
+        repairedEntries.forEach(entry => {
+          const current = nextProjects[entry.projectId];
+          if (!current) {
+            return;
+          }
+
+          const nextThumbnailUri = entry.video.thumbnailUris[0] ?? current.thumbnailUri;
+          const mediaUnchanged =
+            current.video.localUri === entry.video.localUri &&
+            current.video.unavailable === entry.video.unavailable &&
+            sameUriList(current.video.thumbnailUris, entry.video.thumbnailUris) &&
+            current.thumbnailUri === nextThumbnailUri;
+
+          if (mediaUnchanged) {
+            return;
+          }
+
+          nextProjects[entry.projectId] = {
+            ...current,
+            thumbnailUri: nextThumbnailUri,
+            video: {
+              ...entry.video,
+              thumbnailUris: [...entry.video.thumbnailUris],
+            },
+          };
+          changed = true;
+        });
+
+        if (!changed) {
+          return state;
+        }
+
+        persistProjects(nextProjects);
+        return {
+          projects: nextProjects,
+        };
+      });
+    })().catch(() => undefined);
   },
 
   createProjectFromVideo: (video, name) => {
@@ -569,16 +647,37 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
   },
 
   selectTrack: trackId => {
-    set(state =>
-      state.ui.selectedTrackId === trackId
-        ? state
-        : {
-            ui: {
-              ...state.ui,
-              selectedTrackId: trackId,
-            },
-          },
-    );
+    const state = get();
+    if (state.ui.selectedTrackId === trackId) {
+      return;
+    }
+
+    const selectedProjectId = state.ui.selectedProjectId;
+    const snapshot = selectedProjectId
+      ? projectSnapshot(state, selectedProjectId)
+      : null;
+
+    if (snapshot) {
+      snapshot.description = 'select-region';
+      pushUndoEntry(state, snapshot);
+
+      set({
+        undoStack: [...state.undoStack],
+        redoStack: [...state.redoStack],
+        ui: {
+          ...state.ui,
+          selectedTrackId: trackId,
+        },
+      });
+      return;
+    }
+
+    set({
+      ui: {
+        ...state.ui,
+        selectedTrackId: trackId,
+      },
+    });
   },
 
   addTrack: (type, template) => {
@@ -867,6 +966,63 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
               blendMode,
             }
           : track,
+      ),
+    }));
+
+    pushUndoEntry(state, snapshot);
+
+    set({
+      projects,
+      undoStack: [...state.undoStack],
+      redoStack: [],
+    });
+  },
+
+  setTrackTimeRange: (trackId, startMs, endMs) => {
+    const state = get();
+    const project = findSelectedProject(state);
+    if (!project) {
+      return;
+    }
+
+    const track = project.tracks.find(item => item.id === trackId);
+    if (!track) {
+      return;
+    }
+
+    const currentRange = getTrackRange(track, project.video.durationMs);
+    const requestedStart = Number.isFinite(startMs) ? startMs : currentRange.startMs;
+    const requestedEnd = Number.isFinite(endMs) ? endMs : currentRange.endMs;
+    const boundedStart = Math.max(0, Math.min(requestedStart, project.video.durationMs));
+    const boundedEnd = Math.max(0, Math.min(requestedEnd, project.video.durationMs));
+
+    let nextStart = Math.min(boundedStart, boundedEnd);
+    let nextEnd = Math.max(boundedStart, boundedEnd);
+
+    if (nextEnd - nextStart < MIN_TRACK_DURATION_MS) {
+      nextEnd = Math.min(project.video.durationMs, nextStart + MIN_TRACK_DURATION_MS);
+      nextStart = Math.max(0, nextEnd - MIN_TRACK_DURATION_MS);
+    }
+
+    if (
+      approxEqual(currentRange.startMs, nextStart) &&
+      approxEqual(currentRange.endMs, nextEnd)
+    ) {
+      return;
+    }
+
+    const snapshot = projectSnapshot(state, project.id);
+
+    const projects = updateProjectAndPersist(state.projects, project.id, current => ({
+      ...current,
+      tracks: current.tracks.map(candidate =>
+        candidate.id === trackId
+          ? {
+              ...candidate,
+              startMs: nextStart,
+              endMs: nextEnd,
+            }
+          : candidate,
       ),
     }));
 

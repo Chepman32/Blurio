@@ -16,6 +16,7 @@ import {
   createVideoMetaFromAsset,
   generateVideoThumbnails,
   isICloudOnlyAsset,
+  persistVideoSource,
 } from '../utils';
 import { useAppTheme } from '../theme';
 
@@ -64,14 +65,21 @@ export const ImportScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
+    const persistedMeta = await persistVideoSource(meta);
+
     setPreparing(true);
-    setVideoMeta(meta);
+    setVideoMeta(persistedMeta);
     setPreviewImageFailed(false);
     setFailedThumbs({});
 
     try {
       const [thumbnailUris] = await Promise.all([
-        generateVideoThumbnails(meta.localUri, meta.durationMs),
+        generateVideoThumbnails(
+          persistedMeta.localUri,
+          persistedMeta.durationMs,
+          12,
+          persistedMeta.id,
+        ),
         new Promise<void>(resolve => setTimeout(resolve, 420)),
       ]);
 
@@ -80,7 +88,7 @@ export const ImportScreen: React.FC<Props> = ({ navigation }) => {
       }
 
       setVideoMeta(current =>
-        current && current.id === meta.id
+        current && current.id === persistedMeta.id
           ? {
               ...current,
               thumbnailUris,

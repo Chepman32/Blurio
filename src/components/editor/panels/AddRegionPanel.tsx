@@ -13,6 +13,8 @@ interface AddRegionPanelProps {
   hasSelection: boolean;
   strength: number;
   onChangeStrength: (strength: number) => void;
+  onStrengthChangeStart?: () => void;
+  onStrengthChangeEnd?: () => void;
 }
 
 export const AddRegionPanel: React.FC<AddRegionPanelProps> = ({
@@ -20,6 +22,8 @@ export const AddRegionPanel: React.FC<AddRegionPanelProps> = ({
   hasSelection,
   strength,
   onChangeStrength,
+  onStrengthChangeStart,
+  onStrengthChangeEnd,
 }) => {
   const { colors } = useAppTheme();
 
@@ -80,6 +84,8 @@ export const AddRegionPanel: React.FC<AddRegionPanelProps> = ({
             label={STRINGS.params.strength}
             value={strength}
             onChange={onChangeStrength}
+            onChangeStart={onStrengthChangeStart}
+            onChangeEnd={onStrengthChangeEnd}
             accessibilityLabel={STRINGS.params.strength}
           />
         ) : null}

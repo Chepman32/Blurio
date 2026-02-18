@@ -17,7 +17,7 @@ import { BlurioPreviewView } from '../../native';
 import type { ID, Project, RenderState, RenderStateTrack } from '../../types';
 import { clamp } from '../../utils';
 import { useAppTheme } from '../../theme';
-import { RegionOverlay, type RegionResizeHandleKey } from './RegionOverlay';
+import { RegionOverlay } from './RegionOverlay';
 import { SnapGuides } from './SnapGuides';
 
 interface EditorCanvasProps {
@@ -38,19 +38,6 @@ interface EditorCanvasProps {
 const HANDLE_MIN_SIZE = 0.08;
 const HANDLE_SNAP_THRESHOLD = 0.02;
 const STORE_THROTTLE_FRAMES = 4;
-
-type AxisDirection = -1 | 0 | 1;
-
-const HANDLE_AXES: Record<RegionResizeHandleKey, { x: AxisDirection; y: AxisDirection }> = {
-  tl: { x: -1, y: -1 },
-  tc: { x: 0, y: -1 },
-  tr: { x: 1, y: -1 },
-  cl: { x: -1, y: 0 },
-  cr: { x: 1, y: 0 },
-  bl: { x: -1, y: 1 },
-  bc: { x: 0, y: 1 },
-  br: { x: 1, y: 1 },
-};
 
 export const EditorCanvas: React.FC<EditorCanvasProps> = ({
   project,
@@ -215,6 +202,39 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
 
   const handleTapToPosition = (tapX: number, tapY: number) => {
     if (!selectedTrack) {
+      return;
+    }
+
+    const tappedNonSelectedTrack = [...renderState.tracks]
+      .sort((left, right) => right.zIndex - left.zIndex)
+      .find(track => {
+        if (!track.visible || track.id === selectedTrack.id) {
+          return false;
+        }
+
+        const width = Math.max(track.values.width * layout.width, 24);
+        const height = Math.max(track.values.height * layout.height, 24);
+        const left = clamp(
+          track.values.x * layout.width,
+          0,
+          Math.max(0, layout.width - width),
+        );
+        const top = clamp(
+          track.values.y * layout.height,
+          0,
+          Math.max(0, layout.height - height),
+        );
+
+        return (
+          tapX >= left &&
+          tapX <= left + width &&
+          tapY >= top &&
+          tapY <= top + height
+        );
+      });
+
+    if (tappedNonSelectedTrack) {
+      onSelectTrack(tappedNonSelectedTrack.id);
       return;
     }
 

@@ -17,6 +17,8 @@ interface AnimatedSliderProps {
   min?: number;
   max?: number;
   onChange: (value: number) => void;
+  onChangeStart?: () => void;
+  onChangeEnd?: () => void;
   accessibilityLabel: string;
 }
 
@@ -26,6 +28,8 @@ export const AnimatedSlider: React.FC<AnimatedSliderProps> = ({
   min = 0,
   max = 1,
   onChange,
+  onChangeStart,
+  onChangeEnd,
   accessibilityLabel,
 }) => {
   const { colors } = useAppTheme();
@@ -60,6 +64,9 @@ export const AnimatedSlider: React.FC<AnimatedSliderProps> = ({
       context.value = progress.value;
       active.value = 1;
       runOnJS(setIsDragging)(true);
+      if (onChangeStart) {
+        runOnJS(onChangeStart)();
+      }
     })
     .onUpdate(event => {
       if (trackWidth <= 0) {
@@ -77,6 +84,9 @@ export const AnimatedSlider: React.FC<AnimatedSliderProps> = ({
     .onFinalize(() => {
       active.value = 0;
       runOnJS(setIsDragging)(false);
+      if (onChangeEnd) {
+        runOnJS(onChangeEnd)();
+      }
     });
 
   const fillStyle = useAnimatedStyle(() => ({

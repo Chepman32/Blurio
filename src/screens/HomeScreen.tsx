@@ -2,13 +2,15 @@ import React, { useEffect, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
+  Image,
   ListRenderItemInfo,
   StyleSheet,
   TouchableOpacity,
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import Ionicons from 'react-native-vector-icons/Ionicons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Plus } from 'lucide-react-native';
 import Animated, {
   cancelAnimation,
   FadeInDown,
@@ -34,6 +36,7 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 
 export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useAppTheme();
+  const insets = useSafeAreaInsets();
   const projects = useProjectList();
   const deleteProject = useEditorStore(state => state.deleteProject);
   const duplicateProjectById = useEditorStore(state => state.duplicateProjectById);
@@ -93,6 +96,8 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     </Animated.View>
   );
 
+  const fabBottom = Math.max(insets.bottom + SPACING.sm, SPACING.xl);
+
   return (
     <GradientBackground>
       <View style={styles.container}>
@@ -102,7 +107,11 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             accessibilityLabel={STRINGS.accessibility.settingsButton}
             onPress={() => navigation.navigate('Settings')}
             style={[styles.settingsButton, { borderColor: colors.cardBorder }]}>
-            <Ionicons name="settings-outline" size={20} color={colors.textPrimary} />
+            <Image
+              source={require('../assets/icons/settings--.png')}
+              style={[styles.settingsIcon, { tintColor: colors.textPrimary }]}
+              resizeMode="contain"
+            />
           </TouchableOpacity>
         </View>
 
@@ -129,7 +138,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
             keyExtractor={item => item.id}
             renderItem={renderProjectItem}
             showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.listContent}
+            contentContainerStyle={[styles.listContent, { paddingBottom: fabBottom + 84 }]}
           />
         )}
 
@@ -160,6 +169,21 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
               : []
           }
         />
+
+        <TouchableOpacity
+          accessibilityRole="button"
+          accessibilityLabel={STRINGS.home.createProjectFab}
+          onPress={() => navigation.navigate('Import')}
+          style={[
+            styles.fabButton,
+            {
+              bottom: fabBottom,
+              backgroundColor: colors.accent,
+              borderColor: `${colors.accent}BB`,
+            },
+          ]}>
+          <Plus size={26} color="#FFFFFF" />
+        </TouchableOpacity>
       </View>
     </GradientBackground>
   );
@@ -186,6 +210,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  settingsIcon: {
+    width: 22,
+    height: 22,
+  },
   listContent: {
     paddingBottom: SPACING.md,
   },
@@ -203,5 +231,20 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 260,
     marginBottom: SPACING.sm,
+  },
+  fabButton: {
+    position: 'absolute',
+    right: SPACING.md,
+    width: 58,
+    height: 58,
+    borderRadius: 29,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0EA5E9',
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 6,
   },
 });
