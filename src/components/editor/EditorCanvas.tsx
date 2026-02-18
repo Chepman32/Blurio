@@ -33,6 +33,7 @@ interface EditorCanvasProps {
   onUpdateTrackValues: (partial: Partial<RenderStateTrack['values']>) => void;
   onCanvasTransformChange: (zoom: number, panX: number, panY: number) => void;
   onLongPressTrack: () => void;
+  onTimeSync?: (timeMs: number) => void;
 }
 
 const HANDLE_MIN_SIZE = 0.08;
@@ -52,6 +53,7 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
   onUpdateTrackValues,
   onCanvasTransformChange,
   onLongPressTrack,
+  onTimeSync,
 }) => {
   const { colors } = useAppTheme();
   const [layout, setLayout] = useState({ width: 1, height: 1 });
@@ -638,6 +640,7 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
             paused={paused}
             quality={renderState.previewQuality}
             renderState={renderState}
+            onTimeSync={onTimeSync}
           />
 
           <View style={StyleSheet.absoluteFill}>

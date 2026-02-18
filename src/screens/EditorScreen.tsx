@@ -630,6 +630,7 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
             onUpdateTrackValues={updateSelectedTrackValuesLive}
             onCanvasTransformChange={setCanvasTransform}
             onLongPressTrack={() => setMarkerContext(null)}
+            onTimeSync={setPlayhead}
           />
         </Animated.View>
 
