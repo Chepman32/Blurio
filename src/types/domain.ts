@@ -151,6 +151,26 @@ export interface RenderStateTrack {
   pathPoints: NormalizedPoint[];
 }
 
+export interface RegionTemplateValues {
+  width: number;
+  height: number;
+  rotation: number;
+  strength: number;
+  feather: number;
+  opacity: number;
+  cornerRadius: number;
+}
+
+export interface RegionTemplate {
+  id: ID;
+  name: string;
+  category: string;
+  type: RegionType;
+  values: RegionTemplateValues;
+  createdAt: UnixMs;
+  updatedAt: UnixMs;
+}
+
 export interface StoredSettings {
   appearance: 'system' | 'dark' | 'light';
   reduceMotionOverride: 'system' | 'on' | 'off';
@@ -158,4 +178,5 @@ export interface StoredSettings {
   previewQuality: PreviewQuality;
   autoGenerateThumbs: boolean;
   safeAreaOverlayDefault: boolean;
+  regionTemplates: RegionTemplate[];
 }

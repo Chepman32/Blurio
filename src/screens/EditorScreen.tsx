@@ -1,16 +1,22 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Modal,
+  Pressable,
+  ScrollView,
   StyleSheet,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { ArrowLeft, Share2 } from 'lucide-react-native';
+import { ArrowLeft, Layers, PlusSquare, Redo2, Share2, Trash2, Undo2 } from 'lucide-react-native';
 import Animated, {
+  runOnJS,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import {
   AddRegionPanel,
@@ -33,16 +39,38 @@ import {
   MID_SHEET_HEIGHT,
   MIN_SHEET_HEIGHT,
   DEFAULT_KEYFRAME_VALUES,
+  RADIUS,
   SPACING,
   STRINGS,
 } from '../constants';
 import { useAppLifecycle, useHaptics, useProjectHealthChecks } from '../hooks';
 import { useAppTheme } from '../theme';
 import { useCurrentRenderState, useEditorStore, useSelectedProject } from '../store';
-import type { ID, RootStackParamList } from '../types';
+import type { ID, RegionType, RootStackParamList } from '../types';
 import { checkAssetAvailability } from '../utils';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Editor'>;
+
+const DEFAULT_TEMPLATE_CATEGORIES = ['Faces', 'Vehicles', 'Plates', 'People', 'Objects'] as const;
+
+const templateTypeLabel = (type: RegionType): string => {
+  switch (type) {
+    case 'rectangle':
+      return STRINGS.editor.rectangle;
+    case 'roundedRect':
+      return STRINGS.editor.roundedRect;
+    case 'ellipse':
+      return STRINGS.editor.ellipse;
+    case 'path':
+      return STRINGS.editor.path;
+    case 'face':
+      return STRINGS.editor.faceTemplate;
+    case 'plate':
+      return STRINGS.editor.plateTemplate;
+    default:
+      return STRINGS.editor.addRegion;
+  }
+};
 
 export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
   const { colors } = useAppTheme();
@@ -63,8 +91,13 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
   const setActivePanel = useEditorStore(state => state.setActivePanel);
   const setSheetExpanded = useEditorStore(state => state.setSheetExpanded);
   const addTrack = useEditorStore(state => state.addTrack);
+  const applyRegionTemplate = useEditorStore(state => state.applyRegionTemplate);
   const selectTrack = useEditorStore(state => state.selectTrack);
   const removeTrack = useEditorStore(state => state.removeTrack);
+  const removeAllTracks = useEditorStore(state => state.removeAllTracks);
+  const saveSelectedTrackAsTemplate = useEditorStore(
+    state => state.saveSelectedTrackAsTemplate,
+  );
   const toggleTrackVisibility = useEditorStore(state => state.toggleTrackVisibility);
   const toggleTrackLock = useEditorStore(state => state.toggleTrackLock);
   const reorderTracks = useEditorStore(state => state.reorderTracks);
@@ -96,6 +129,9 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
   const setSafeAreaOverlayVisible = useEditorStore(state => state.setSafeAreaOverlayVisible);
   const undo = useEditorStore(state => state.undo);
   const redo = useEditorStore(state => state.redo);
+  const regionTemplates = useEditorStore(state => state.settings.regionTemplates);
+  const canUndo = useEditorStore(state => state.undoStack.length > 0);
+  const canRedo = useEditorStore(state => state.redoStack.length > 0);
 
   const setAssetUnavailablePromptVisible = useEditorStore(
     state => state.setAssetUnavailablePromptVisible,
@@ -109,6 +145,16 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
     trackId: ID;
     keyframeId: ID;
   } | null>(null);
+  const [saveTemplateModalVisible, setSaveTemplateModalVisible] = useState(false);
+  const [applyTemplateModalVisible, setApplyTemplateModalVisible] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [templateCategory, setTemplateCategory] = useState<string>(
+    STRINGS.editor.templateDefaultCategory,
+  );
+  const saveModalProgress = useSharedValue(0);
+  const saveModalBackdropProgress = useSharedValue(0);
+  const applyModalProgress = useSharedValue(0);
+  const applyModalBackdropProgress = useSharedValue(0);
 
   useProjectHealthChecks();
 
@@ -214,6 +260,114 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
     typeof selectedStrengthValue === 'number' && Number.isFinite(selectedStrengthValue)
     ? selectedStrengthValue
     : DEFAULT_KEYFRAME_VALUES.strength;
+  const sortedTemplates = useMemo(
+    () => [...regionTemplates].sort((a, b) => b.updatedAt - a.updatedAt),
+    [regionTemplates],
+  );
+  const templateCategories = useMemo(() => {
+    const dynamic = regionTemplates
+      .map(template => template.category.trim())
+      .filter(category => category.length > 0);
+    return Array.from(
+      new Set([
+        STRINGS.editor.templateDefaultCategory,
+        ...DEFAULT_TEMPLATE_CATEGORIES,
+        ...dynamic,
+      ]),
+    );
+  }, [regionTemplates]);
+
+  const openSaveTemplateModal = useCallback(() => {
+    setTemplateName('');
+    setTemplateCategory(templateCategories[0] ?? STRINGS.editor.templateDefaultCategory);
+    setSaveTemplateModalVisible(true);
+  }, [templateCategories]);
+
+  const closeSaveTemplateModal = useCallback(() => {
+    saveModalProgress.value = withSpring(0, {
+      damping: 22,
+      stiffness: 260,
+      velocity: -2.2,
+    });
+    saveModalBackdropProgress.value = withTiming(0, { duration: 170 }, finished => {
+      if (finished) {
+        runOnJS(setSaveTemplateModalVisible)(false);
+      }
+    });
+  }, [saveModalBackdropProgress, saveModalProgress]);
+
+  const openApplyTemplateModal = useCallback(() => {
+    setApplyTemplateModalVisible(true);
+  }, []);
+
+  const closeApplyTemplateModal = useCallback(() => {
+    applyModalProgress.value = withSpring(0, {
+      damping: 22,
+      stiffness: 260,
+      velocity: -2.2,
+    });
+    applyModalBackdropProgress.value = withTiming(0, { duration: 170 }, finished => {
+      if (finished) {
+        runOnJS(setApplyTemplateModalVisible)(false);
+      }
+    });
+  }, [applyModalBackdropProgress, applyModalProgress]);
+
+  useEffect(() => {
+    if (!saveTemplateModalVisible) {
+      return;
+    }
+
+    saveModalBackdropProgress.value = 0;
+    saveModalProgress.value = 0;
+    saveModalBackdropProgress.value = withTiming(1, { duration: 220 });
+    saveModalProgress.value = withSpring(1, {
+      damping: 18,
+      stiffness: 250,
+      mass: 0.9,
+      velocity: 2.8,
+    });
+  }, [saveModalBackdropProgress, saveModalProgress, saveTemplateModalVisible]);
+
+  useEffect(() => {
+    if (!applyTemplateModalVisible) {
+      return;
+    }
+
+    applyModalBackdropProgress.value = 0;
+    applyModalProgress.value = 0;
+    applyModalBackdropProgress.value = withTiming(1, { duration: 220 });
+    applyModalProgress.value = withSpring(1, {
+      damping: 18,
+      stiffness: 250,
+      mass: 0.9,
+      velocity: 2.8,
+    });
+  }, [applyModalBackdropProgress, applyModalProgress, applyTemplateModalVisible]);
+
+  const saveModalBackdropStyle = useAnimatedStyle(() => ({
+    opacity: saveModalBackdropProgress.value,
+  }));
+
+  const saveModalCardStyle = useAnimatedStyle(() => ({
+    opacity: saveModalProgress.value,
+    transform: [
+      { translateY: (1 - saveModalProgress.value) * 56 },
+      { scale: 0.88 + saveModalProgress.value * 0.12 },
+    ],
+  }));
+
+  const applyModalBackdropStyle = useAnimatedStyle(() => ({
+    opacity: applyModalBackdropProgress.value,
+  }));
+
+  const applyModalCardStyle = useAnimatedStyle(() => ({
+    opacity: applyModalProgress.value,
+    transform: [
+      { translateY: (1 - applyModalProgress.value) * 56 },
+      { scale: 0.88 + applyModalProgress.value * 0.12 },
+    ],
+  }));
 
   if (!project || !renderState) {
     return (
@@ -234,6 +388,7 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
               addTrack(type, template);
               impact();
             }}
+            hasSelection={Boolean(selectedTrack)}
             strength={selectedStrength}
             onChangeStrength={strength => {
               if (!Number.isFinite(strength)) {
@@ -326,13 +481,82 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
             <ArrowLeft size={18} color={colors.textPrimary} />
           </TouchableOpacity>
 
-          <View style={styles.titleWrap}>
-            <AppText variant="section" numberOfLines={1}>
-              {project.name}
-            </AppText>
-            <AppText variant="micro" color={colors.textMuted}>
-              {project.video.displayName}
-            </AppText>
+          <View style={styles.headerActionsWrap}>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.headerActionsRow}>
+              {selectedTrack ? (
+                <>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={STRINGS.editor.saveAsTemplate}
+                    onPress={openSaveTemplateModal}
+                    style={[styles.headerActionButton, { borderColor: colors.cardBorder }]}>
+                    <PlusSquare size={16} color={colors.textPrimary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={STRINGS.editor.removeRegion}
+                    onPress={() => {
+                      removeTrack(selectedTrack.id);
+                      warning();
+                    }}
+                    style={[styles.headerActionButton, { borderColor: colors.cardBorder }]}>
+                    <Trash2 size={16} color={colors.destructive} />
+                  </TouchableOpacity>
+                </>
+              ) : (
+                <>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={STRINGS.editor.applyTemplate}
+                    onPress={openApplyTemplateModal}
+                    style={[styles.headerActionButton, { borderColor: colors.cardBorder }]}>
+                    <Layers size={16} color={colors.textPrimary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={STRINGS.editor.removeAllRegions}
+                    disabled={project.tracks.length === 0}
+                    onPress={() => {
+                      removeAllTracks();
+                      warning();
+                    }}
+                    style={[
+                      styles.headerActionButton,
+                      { borderColor: colors.cardBorder },
+                      project.tracks.length === 0 ? styles.headerActionDisabled : null,
+                    ]}>
+                    <Trash2 size={16} color={colors.destructive} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={STRINGS.editor.undo}
+                    disabled={!canUndo}
+                    onPress={undo}
+                    style={[
+                      styles.headerActionButton,
+                      { borderColor: colors.cardBorder },
+                      !canUndo ? styles.headerActionDisabled : null,
+                    ]}>
+                    <Undo2 size={16} color={colors.textPrimary} />
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    accessibilityRole="button"
+                    accessibilityLabel={STRINGS.editor.redo}
+                    disabled={!canRedo}
+                    onPress={redo}
+                    style={[
+                      styles.headerActionButton,
+                      { borderColor: colors.cardBorder },
+                      !canRedo ? styles.headerActionDisabled : null,
+                    ]}>
+                    <Redo2 size={16} color={colors.textPrimary} />
+                  </TouchableOpacity>
+                </>
+              )}
+            </ScrollView>
           </View>
 
           <TouchableOpacity
@@ -434,6 +658,148 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
               : []
           }
         />
+
+        <Modal
+          transparent
+          animationType="none"
+          visible={saveTemplateModalVisible}
+          onRequestClose={closeSaveTemplateModal}>
+          <View style={styles.modalRoot}>
+            <Animated.View style={[styles.modalDimmer, saveModalBackdropStyle]} />
+            <Pressable style={StyleSheet.absoluteFill} onPress={closeSaveTemplateModal} />
+            <Animated.View
+              style={[
+                styles.modalCard,
+                { backgroundColor: colors.sheet, borderColor: colors.cardBorder },
+                saveModalCardStyle,
+              ]}>
+              <AppText variant="section">{STRINGS.editor.saveTemplateTitle}</AppText>
+              <View style={styles.inputGroup}>
+                <AppText variant="micro" color={colors.textSecondary}>
+                  {STRINGS.editor.templateNameLabel}
+                </AppText>
+                <TextInput
+                  value={templateName}
+                  onChangeText={setTemplateName}
+                  placeholder={STRINGS.editor.templateNamePlaceholder}
+                  placeholderTextColor={colors.textMuted}
+                  style={[
+                    styles.input,
+                    { borderColor: colors.cardBorder, color: colors.textPrimary },
+                  ]}
+                />
+              </View>
+              <View style={styles.inputGroup}>
+                <AppText variant="micro" color={colors.textSecondary}>
+                  {STRINGS.editor.templateCategoryLabel}
+                </AppText>
+                <View style={styles.categoryList}>
+                  {templateCategories.map(category => {
+                    const selected = category === templateCategory;
+                    const chipStyle = {
+                      borderColor: selected ? `${colors.accent}88` : colors.cardBorder,
+                      backgroundColor: selected ? `${colors.accent}22` : 'transparent',
+                    };
+                    return (
+                      <TouchableOpacity
+                        key={category}
+                        accessibilityRole="button"
+                        accessibilityLabel={`${STRINGS.editor.templateCategoryLabel} ${category}`}
+                        onPress={() => setTemplateCategory(category)}
+                        style={[styles.categoryChip, chipStyle]}>
+                        <AppText
+                          variant="micro"
+                          color={selected ? colors.accent : colors.textSecondary}>
+                          {category}
+                        </AppText>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </View>
+              <View style={styles.modalActionsRow}>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={STRINGS.common.cancel}
+                  onPress={closeSaveTemplateModal}
+                  style={[styles.modalActionButton, { borderColor: colors.cardBorder }]}>
+                  <AppText variant="section">{STRINGS.common.cancel}</AppText>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={STRINGS.common.save}
+                  onPress={() => {
+                    saveSelectedTrackAsTemplate(templateName, templateCategory);
+                    impact();
+                    closeSaveTemplateModal();
+                  }}
+                  style={[
+                    styles.modalActionButton,
+                    { borderColor: colors.cardBorder, backgroundColor: colors.accent },
+                  ]}>
+                  <AppText variant="section" color="#FFFFFF">
+                    {STRINGS.common.save}
+                  </AppText>
+                </TouchableOpacity>
+              </View>
+            </Animated.View>
+          </View>
+        </Modal>
+
+        <Modal
+          transparent
+          animationType="none"
+          visible={applyTemplateModalVisible}
+          onRequestClose={closeApplyTemplateModal}>
+          <View style={styles.modalRoot}>
+            <Animated.View style={[styles.modalDimmer, applyModalBackdropStyle]} />
+            <Pressable style={StyleSheet.absoluteFill} onPress={closeApplyTemplateModal} />
+            <Animated.View
+              style={[
+                styles.modalCard,
+                styles.applyModalCard,
+                { backgroundColor: colors.sheet, borderColor: colors.cardBorder },
+                applyModalCardStyle,
+              ]}>
+              <AppText variant="section">{STRINGS.editor.applyTemplateTitle}</AppText>
+              {sortedTemplates.length === 0 ? (
+                <AppText variant="micro" color={colors.textMuted}>
+                  {STRINGS.editor.noTemplatesYet}
+                </AppText>
+              ) : (
+                <ScrollView
+                  style={styles.templateList}
+                  contentContainerStyle={styles.templateListContent}
+                  showsVerticalScrollIndicator={false}>
+                  {sortedTemplates.map(template => (
+                    <TouchableOpacity
+                      key={template.id}
+                      accessibilityRole="button"
+                      accessibilityLabel={template.name}
+                      onPress={() => {
+                        applyRegionTemplate(template.id);
+                        impact();
+                        closeApplyTemplateModal();
+                      }}
+                      style={[styles.templateItem, { borderColor: colors.cardBorder }]}>
+                      <AppText variant="bodyStrong">{template.name}</AppText>
+                      <AppText variant="micro" color={colors.textSecondary}>
+                        {`${template.category} • ${templateTypeLabel(template.type)}`}
+                      </AppText>
+                    </TouchableOpacity>
+                  ))}
+                </ScrollView>
+              )}
+              <TouchableOpacity
+                accessibilityRole="button"
+                accessibilityLabel={STRINGS.common.close}
+                onPress={closeApplyTemplateModal}
+                style={[styles.modalActionButton, { borderColor: colors.cardBorder }]}>
+                <AppText variant="section">{STRINGS.common.close}</AppText>
+              </TouchableOpacity>
+            </Animated.View>
+          </View>
+        </Modal>
       </View>
 
       <ActionSheetModal
@@ -489,11 +855,99 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  titleWrap: {
+  headerActionsWrap: {
     flex: 1,
+    minHeight: 42,
+    justifyContent: 'center',
+  },
+  headerActionsRow: {
+    alignItems: 'center',
+    gap: SPACING.xs,
+    paddingHorizontal: 2,
+  },
+  headerActionButton: {
+    width: 34,
+    height: 34,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerActionDisabled: {
+    opacity: 0.45,
   },
   canvasWrap: {
     flex: 1,
     minHeight: 220,
+  },
+  modalRoot: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.md,
+  },
+  modalDimmer: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0, 0, 0, 0.45)',
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 380,
+    borderRadius: RADIUS.card,
+    borderWidth: 1,
+    padding: SPACING.md,
+    gap: SPACING.sm,
+  },
+  applyModalCard: {
+    maxHeight: 420,
+  },
+  inputGroup: {
+    gap: SPACING.xs,
+  },
+  categoryList: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: SPACING.xs,
+  },
+  categoryChip: {
+    borderWidth: 1,
+    borderRadius: RADIUS.pill,
+    minHeight: 30,
+    paddingHorizontal: SPACING.sm,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  input: {
+    borderWidth: 1,
+    borderRadius: RADIUS.control,
+    minHeight: 42,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+  },
+  modalActionsRow: {
+    flexDirection: 'row',
+    gap: SPACING.sm,
+  },
+  modalActionButton: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: RADIUS.control,
+    minHeight: 42,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.sm,
+  },
+  templateList: {
+    maxHeight: 240,
+  },
+  templateListContent: {
+    gap: SPACING.xs,
+  },
+  templateItem: {
+    borderWidth: 1,
+    borderRadius: RADIUS.control,
+    paddingHorizontal: SPACING.sm,
+    paddingVertical: SPACING.xs,
+    gap: 2,
   },
 });

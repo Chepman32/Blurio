@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import {
   DEFAULT_KEYFRAME_PARAM_MASK,
+  DEFAULT_KEYFRAME_VALUES,
   DEFAULT_SETTINGS,
   KEYFRAME_SNAP_DISTANCE_MS,
 } from '../constants';
@@ -12,6 +13,7 @@ import type {
   KeyframeValues,
   PreviewQuality,
   Project,
+  RegionTemplate,
   RegionType,
   StoredSettings,
   Track,
@@ -59,8 +61,11 @@ interface BlurioStore {
   selectProject: (projectId: ID | null) => void;
   selectTrack: (trackId: ID | null) => void;
   addTrack: (type: RegionType, template?: 'face' | 'plate') => void;
+  applyRegionTemplate: (templateId: ID) => void;
   reorderTracks: (orderedTrackIds: ID[]) => void;
   removeTrack: (trackId: ID) => void;
+  removeAllTracks: () => void;
+  saveSelectedTrackAsTemplate: (name: string, category: string) => void;
   toggleTrackVisibility: (trackId: ID) => void;
   toggleTrackLock: (trackId: ID) => void;
   setTrackBlendMode: (trackId: ID, blendMode: Track['blendMode']) => void;
@@ -384,6 +389,50 @@ const applyTemplateValues = (template?: 'face' | 'plate'): Partial<KeyframeValue
 const generateTrackName = (project: Project): string =>
   `Region ${project.tracks.length + 1}`;
 
+const clampUnit = (value: number, fallback: number): number =>
+  Number.isFinite(value) ? Math.max(0, Math.min(value, 1)) : fallback;
+
+const sanitizeTemplateText = (value: string, fallback: string): string => {
+  const normalized = value.trim();
+  return normalized.length > 0 ? normalized : fallback;
+};
+
+const buildTemplateValues = (values: KeyframeValues): RegionTemplate['values'] => ({
+  width: clampUnit(values.width, DEFAULT_KEYFRAME_VALUES.width),
+  height: clampUnit(values.height, DEFAULT_KEYFRAME_VALUES.height),
+  rotation: Number.isFinite(values.rotation) ? values.rotation : DEFAULT_KEYFRAME_VALUES.rotation,
+  strength: clampUnit(values.strength, DEFAULT_KEYFRAME_VALUES.strength),
+  feather: clampUnit(values.feather, DEFAULT_KEYFRAME_VALUES.feather),
+  opacity: clampUnit(values.opacity, DEFAULT_KEYFRAME_VALUES.opacity),
+  cornerRadius: clampUnit(values.cornerRadius, DEFAULT_KEYFRAME_VALUES.cornerRadius),
+});
+
+const buildTrackValuesFromTemplate = (
+  template: RegionTemplate,
+): Partial<KeyframeValues> => {
+  const width = clampUnit(template.values.width, DEFAULT_KEYFRAME_VALUES.width);
+  const height = clampUnit(template.values.height, DEFAULT_KEYFRAME_VALUES.height);
+  const x = Math.max(0, Math.min(1 - width, 0.5 - width / 2));
+  const y = Math.max(0, Math.min(1 - height, 0.5 - height / 2));
+
+  return {
+    x,
+    y,
+    width,
+    height,
+    rotation: Number.isFinite(template.values.rotation)
+      ? template.values.rotation
+      : DEFAULT_KEYFRAME_VALUES.rotation,
+    strength: clampUnit(template.values.strength, DEFAULT_KEYFRAME_VALUES.strength),
+    feather: clampUnit(template.values.feather, DEFAULT_KEYFRAME_VALUES.feather),
+    opacity: clampUnit(template.values.opacity, DEFAULT_KEYFRAME_VALUES.opacity),
+    cornerRadius: clampUnit(
+      template.values.cornerRadius,
+      DEFAULT_KEYFRAME_VALUES.cornerRadius,
+    ),
+  };
+};
+
 export const useEditorStore = create<BlurioStore>((set, get) => ({
   projects: {},
   settings: { ...DEFAULT_SETTINGS },
@@ -567,6 +616,46 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
     });
   },
 
+  applyRegionTemplate: templateId => {
+    const state = get();
+    const project = findSelectedProject(state);
+    if (!project) {
+      return;
+    }
+
+    const template = state.settings.regionTemplates.find(item => item.id === templateId);
+    if (!template) {
+      return;
+    }
+
+    const snapshot = projectSnapshot(state, project.id);
+
+    const newTrack = createTrack(
+      generateTrackName(project),
+      template.type,
+      state.settings.accentColor,
+      project.tracks.length + 1,
+      buildTrackValuesFromTemplate(template),
+    );
+
+    const projects = updateProjectAndPersist(state.projects, project.id, current => ({
+      ...current,
+      tracks: [...current.tracks, newTrack],
+    }));
+
+    pushUndoEntry(state, snapshot);
+
+    set({
+      projects,
+      undoStack: [...state.undoStack],
+      redoStack: [],
+      ui: {
+        ...state.ui,
+        selectedTrackId: newTrack.id,
+      },
+    });
+  },
+
   reorderTracks: orderedTrackIds => {
     const state = get();
     const project = findSelectedProject(state);
@@ -608,7 +697,7 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
   removeTrack: trackId => {
     const state = get();
     const project = findSelectedProject(state);
-    if (!project || project.tracks.length === 1) {
+    if (!project) {
       return;
     }
 
@@ -635,6 +724,69 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
             : state.ui.selectedTrackId,
       },
     });
+  },
+
+  removeAllTracks: () => {
+    const state = get();
+    const project = findSelectedProject(state);
+    if (!project || project.tracks.length === 0) {
+      return;
+    }
+
+    const snapshot = projectSnapshot(state, project.id);
+
+    const projects = updateProjectAndPersist(state.projects, project.id, current => ({
+      ...current,
+      tracks: [],
+    }));
+
+    pushUndoEntry(state, snapshot);
+
+    set({
+      projects,
+      undoStack: [...state.undoStack],
+      redoStack: [],
+      ui: {
+        ...state.ui,
+        selectedTrackId: null,
+      },
+    });
+  },
+
+  saveSelectedTrackAsTemplate: (name, category) => {
+    const state = get();
+    const project = findSelectedProject(state);
+    const selectedTrackId = state.ui.selectedTrackId;
+    if (!project || !selectedTrackId) {
+      return;
+    }
+
+    const track = project.tracks.find(item => item.id === selectedTrackId);
+    if (!track) {
+      return;
+    }
+
+    const interpolatedValues = buildInitialKeyframeValues(
+      interpolateTrackValuesAtTime(track, state.ui.playheadMs),
+    );
+    const timestamp = Date.now();
+    const nextTemplate: RegionTemplate = {
+      id: createId('template'),
+      name: sanitizeTemplateText(name, `${track.name} Template`),
+      category: sanitizeTemplateText(category, 'General'),
+      type: track.type,
+      values: buildTemplateValues(interpolatedValues),
+      createdAt: timestamp,
+      updatedAt: timestamp,
+    };
+
+    const settings: StoredSettings = {
+      ...state.settings,
+      regionTemplates: [nextTemplate, ...state.settings.regionTemplates].slice(0, 80),
+    };
+
+    persistSettings(settings);
+    set({ settings });
   },
 
   toggleTrackVisibility: trackId => {

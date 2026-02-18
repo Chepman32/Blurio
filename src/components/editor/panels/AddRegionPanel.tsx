@@ -10,12 +10,14 @@ import { AnimatedSlider } from '../AnimatedSlider';
 
 interface AddRegionPanelProps {
   onAddRegion: (type: RegionType, template?: 'face' | 'plate') => void;
+  hasSelection: boolean;
   strength: number;
   onChangeStrength: (strength: number) => void;
 }
 
 export const AddRegionPanel: React.FC<AddRegionPanelProps> = ({
   onAddRegion,
+  hasSelection,
   strength,
   onChangeStrength,
 }) => {
@@ -73,12 +75,14 @@ export const AddRegionPanel: React.FC<AddRegionPanelProps> = ({
           onPress={() => onAddRegion('roundedRect')}
           accessibilityLabel={STRINGS.editor.addRegion}
         />
-        <AnimatedSlider
-          label={STRINGS.params.strength}
-          value={strength}
-          onChange={onChangeStrength}
-          accessibilityLabel={STRINGS.params.strength}
-        />
+        {hasSelection ? (
+          <AnimatedSlider
+            label={STRINGS.params.strength}
+            value={strength}
+            onChange={onChangeStrength}
+            accessibilityLabel={STRINGS.params.strength}
+          />
+        ) : null}
       </View>
     </View>
   );

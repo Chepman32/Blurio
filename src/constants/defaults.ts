@@ -65,6 +65,7 @@ export const DEFAULT_SETTINGS: StoredSettings = {
   previewQuality: 'balanced',
   autoGenerateThumbs: true,
   safeAreaOverlayDefault: false,
+  regionTemplates: [],
 };
 
 export const THEME_BY_APPEARANCE: Record<'dark' | 'light', ThemeColors> = {
