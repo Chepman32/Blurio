@@ -47,6 +47,8 @@ final class BlurioContextMenuContainerView: UIView, UIContextMenuInteractionDele
 
   override init(frame: CGRect) {
     super.init(frame: frame)
+    backgroundColor = .clear
+    isOpaque = false
     if #available(iOS 13.0, *) {
       addInteraction(UIContextMenuInteraction(delegate: self))
     }
@@ -99,6 +101,44 @@ final class BlurioContextMenuContainerView: UIView, UIContextMenuInteractionDele
       let children = self.parsedMenuItems.map { self.makeMenuElement(from: $0) }
       return UIMenu(title: "", children: children)
     }
+  }
+
+  @available(iOS 13.0, *)
+  func contextMenuInteraction(
+    _ interaction: UIContextMenuInteraction,
+    previewForHighlightingMenuWithConfiguration configuration: UIContextMenuConfiguration
+  ) -> UITargetedPreview? {
+    makeTargetedPreview(for: interaction)
+  }
+
+  @available(iOS 13.0, *)
+  func contextMenuInteraction(
+    _ interaction: UIContextMenuInteraction,
+    previewForDismissingMenuWithConfiguration configuration: UIContextMenuConfiguration
+  ) -> UITargetedPreview? {
+    makeTargetedPreview(for: interaction)
+  }
+
+  @available(iOS 13.0, *)
+  private func makeTargetedPreview(for interaction: UIContextMenuInteraction) -> UITargetedPreview? {
+    let targetView = subviews.first ?? self
+    let parameters = UIPreviewParameters()
+    parameters.backgroundColor = .clear
+
+    if !targetView.bounds.isEmpty {
+      let cornerRadius: CGFloat = targetView.layer.cornerRadius > 0 ? targetView.layer.cornerRadius : 14
+      parameters.visiblePath = UIBezierPath(
+        roundedRect: targetView.bounds,
+        cornerRadius: cornerRadius
+      )
+    }
+
+    let centerInContainer = CGPoint(
+      x: targetView.frame.midX,
+      y: targetView.frame.midY
+    )
+    let target = UIPreviewTarget(container: self, center: centerInContainer)
+    return UITargetedPreview(view: targetView, parameters: parameters, target: target)
   }
 
   @available(iOS 13.0, *)
