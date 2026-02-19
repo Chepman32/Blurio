@@ -1,12 +1,18 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Alert,
   Image,
+  KeyboardAvoidingView,
+  LayoutAnimation,
+  Modal,
   Platform,
+  Pressable,
   SectionList,
   SectionListRenderItemInfo,
   StyleSheet,
+  TextInput,
   TouchableOpacity,
+  UIManager,
   View,
 } from 'react-native';
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -19,6 +25,8 @@ import {
 import Animated, {
   cancelAnimation,
   FadeInDown,
+  FadeOutUp,
+  LinearTransition,
   useAnimatedStyle,
   useSharedValue,
   withRepeat,
@@ -58,7 +66,7 @@ interface HomeSection {
 }
 
 export const HomeScreen: React.FC<Props> = ({ navigation }) => {
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
   const insets = useSafeAreaInsets();
   const folders = useFolderList();
   const projects = useProjectList();
@@ -77,8 +85,14 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     'all-projects': true,
   });
+  const [namePromptVisible, setNamePromptVisible] = useState(false);
+  const [namePromptTitle, setNamePromptTitle] = useState('');
+  const [namePromptValue, setNamePromptValue] = useState('');
+  const namePromptSubmitRef = useRef<((value: string) => void) | null>(null);
+  const previousSectionKeysRef = useRef<string[]>([]);
 
   const pulse = useSharedValue(1);
+  const sectionLayoutTransition = LinearTransition.springify().damping(20).stiffness(180);
 
   useEffect(() => {
     pulse.value = withRepeat(withTiming(1.03, { duration: 860 }), -1, true);
@@ -88,6 +102,12 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
       pulse.value = 1;
     };
   }, [pulse]);
+
+  useEffect(() => {
+    if (Platform.OS === 'android') {
+      UIManager.setLayoutAnimationEnabledExperimental?.(true);
+    }
+  }, []);
 
   const pulseStyle = useAnimatedStyle(() => ({
     transform: [{ scale: pulse.value }],
@@ -147,6 +167,19 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   }, [activeProjects, folders, trashProjects]);
 
   useEffect(() => {
+    const nextSectionKeys = sectionDescriptors.map(section => section.key);
+    const previousSectionKeys = previousSectionKeysRef.current;
+    const sectionStructureChanged =
+      previousSectionKeys.length > 0 &&
+      (previousSectionKeys.length !== nextSectionKeys.length ||
+        previousSectionKeys.some((key, index) => key !== nextSectionKeys[index]));
+
+    if (sectionStructureChanged) {
+      LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    }
+
+    previousSectionKeysRef.current = nextSectionKeys;
+
     setExpandedSections(previous => {
       let changed = false;
       const next = { ...previous };
@@ -179,29 +212,48 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     defaultValue: string,
     onSubmit: (value: string) => void,
   ) => {
+    const normalizePromptValue = (value?: string): string => {
+      const trimmed = value?.trim() ?? '';
+      if (trimmed.length === 0) {
+        return '';
+      }
+
+      return `${trimmed.charAt(0).toUpperCase()}${trimmed.slice(1)}`;
+    };
+
     if (Platform.OS === 'ios') {
-      Alert.prompt(
-        title,
-        undefined,
-        [
-          { text: STRINGS.common.cancel, style: 'cancel' },
-          {
-            text: STRINGS.common.save,
-            onPress: (value?: string) => {
-              const normalized = value?.trim() ?? '';
-              if (normalized.length > 0) {
-                onSubmit(normalized);
-              }
-            },
-          },
-        ],
-        'plain-text',
-        defaultValue,
-      );
+      setNamePromptTitle(title);
+      setNamePromptValue(normalizePromptValue(defaultValue));
+      namePromptSubmitRef.current = onSubmit;
+      setNamePromptVisible(true);
       return;
     }
 
     Alert.alert(title, defaultValue);
+  };
+
+  const closeNamePrompt = () => {
+    setNamePromptVisible(false);
+    namePromptSubmitRef.current = null;
+  };
+
+  const onChangeNamePromptValue = (value: string) => {
+    if (value.length === 0) {
+      setNamePromptValue('');
+      return;
+    }
+
+    setNamePromptValue(`${value.charAt(0).toUpperCase()}${value.slice(1)}`);
+  };
+
+  const onSaveNamePrompt = () => {
+    const normalized = namePromptValue.trim();
+    if (normalized.length === 0) {
+      return;
+    }
+
+    namePromptSubmitRef.current?.(normalized);
+    closeNamePrompt();
   };
 
   const onRemoveProject = (project: Project) => {
@@ -371,6 +423,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   ];
 
   const toggleSection = (key: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setExpandedSections(previous => ({
       ...previous,
       [key]: previous[key] === false,
@@ -382,7 +435,10 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     index,
     section,
   }: SectionListRenderItemInfo<Project, HomeSection>) => (
-    <Animated.View entering={FadeInDown.delay(index * 50).springify()}>
+    <Animated.View
+      layout={sectionLayoutTransition}
+      entering={FadeInDown.delay(index * 50).springify()}
+      exiting={FadeOutUp.duration(180)}>
       <BlurioContextMenuView
         menuItems={buildProjectMenuItems(item)}
         onPressMenuItem={actionId => onProjectAction(item, actionId)}>
@@ -427,27 +483,31 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
       </TouchableOpacity>
     );
 
-    if (section.type === 'folder' && section.folderId) {
-      return (
+    const wrappedHeader =
+      section.type === 'folder' && section.folderId ? (
         <BlurioContextMenuView
           menuItems={folderMenuItems}
           onPressMenuItem={actionId => onFolderAction(section.folderId as ID, actionId)}>
           {header}
         </BlurioContextMenuView>
-      );
-    }
-
-    if (section.type === 'trash') {
-      return (
+      ) : section.type === 'trash' ? (
         <BlurioContextMenuView
           menuItems={trashMenuItems}
           onPressMenuItem={onTrashAction}>
           {header}
         </BlurioContextMenuView>
+      ) : (
+        header
       );
-    }
 
-    return header;
+    return (
+      <Animated.View
+        layout={sectionLayoutTransition}
+        entering={FadeInDown.springify()}
+        exiting={FadeOutUp.duration(180)}>
+        {wrappedHeader}
+      </Animated.View>
+    );
   };
 
   const fabBottom = Math.max(insets.bottom + SPACING.sm, SPACING.xl);
@@ -463,16 +523,44 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         ]}>
         <View style={styles.header}>
           <AppText variant="title">{STRINGS.navigation.homeTitle}</AppText>
-          <TouchableOpacity
-            accessibilityLabel={STRINGS.accessibility.settingsButton}
-            onPress={() => navigation.navigate('Settings')}
-            style={[styles.settingsButton, { borderColor: colors.cardBorder }]}>
-            <Image
-              source={require('../assets/icons/settings--.png')}
-              style={[styles.settingsIcon, { tintColor: colors.textPrimary }]}
-              resizeMode="contain"
-            />
-          </TouchableOpacity>
+          <View style={styles.headerActions}>
+            <TouchableOpacity
+              accessibilityRole="button"
+              accessibilityLabel={STRINGS.home.createFolderTitle}
+              onPress={() =>
+                promptForName(STRINGS.home.createFolderTitle, '', value => {
+                  createFolder(value);
+                })
+              }
+              style={[
+                styles.newFolderButton,
+                {
+                  borderColor: colors.cardBorder,
+                  backgroundColor: `${colors.card}BB`,
+                },
+              ]}>
+              <Image
+                source={
+                  isDark
+                    ? require('../assets/icons/newFolder_white.png')
+                    : require('../assets/icons/newFolder.png')
+                }
+                style={styles.newFolderIcon}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              accessibilityLabel={STRINGS.accessibility.settingsButton}
+              onPress={() => navigation.navigate('Settings')}
+              style={[styles.settingsButton, { borderColor: colors.cardBorder }]}>
+              <Image
+                source={require('../assets/icons/settings--.png')}
+                style={[styles.settingsIcon, { tintColor: colors.textPrimary }]}
+                resizeMode="contain"
+              />
+            </TouchableOpacity>
+          </View>
         </View>
 
         {projects.length === 0 ? (
@@ -518,6 +606,56 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
           ]}>
           <Plus size={26} color="#FFFFFF" />
         </TouchableOpacity>
+
+        {Platform.OS === 'ios' ? (
+          <Modal
+            transparent
+            visible={namePromptVisible}
+            animationType="fade"
+            onRequestClose={closeNamePrompt}>
+            <Pressable style={styles.promptBackdrop} onPress={closeNamePrompt}>
+              <KeyboardAvoidingView behavior="padding" style={styles.promptWrap}>
+                <Pressable
+                  style={[styles.promptCard, { backgroundColor: colors.sheet }]}
+                  onPress={event => event.stopPropagation()}>
+                  <AppText variant="section" style={styles.promptTitle}>
+                    {namePromptTitle}
+                  </AppText>
+                  <TextInput
+                    value={namePromptValue}
+                    onChangeText={onChangeNamePromptValue}
+                    style={[
+                      styles.promptInput,
+                      { borderColor: colors.cardBorder, color: colors.textPrimary },
+                    ]}
+                    autoFocus
+                    autoCapitalize="sentences"
+                    autoCorrect={false}
+                    selectionColor={colors.accent}
+                  />
+                  <View style={[styles.promptActions, { borderColor: colors.cardBorder }]}>
+                    <TouchableOpacity
+                      onPress={closeNamePrompt}
+                      style={[
+                        styles.promptActionButton,
+                        styles.promptActionButtonDivider,
+                        { borderRightColor: colors.cardBorder },
+                      ]}>
+                      <AppText variant="bodyStrong" color={colors.accent}>
+                        {STRINGS.common.cancel}
+                      </AppText>
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={onSaveNamePrompt} style={styles.promptActionButton}>
+                      <AppText variant="bodyStrong" color={colors.accent}>
+                        {STRINGS.common.save}
+                      </AppText>
+                    </TouchableOpacity>
+                  </View>
+                </Pressable>
+              </KeyboardAvoidingView>
+            </Pressable>
+          </Modal>
+        ) : null}
       </View>
     </GradientBackground>
   );
@@ -534,6 +672,23 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: SPACING.md,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  newFolderButton: {
+    height: 42,
+    borderRadius: 12,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: SPACING.xs,
+  },
+  newFolderIcon: {
+    width: 74,
+    height: 26,
   },
   settingsButton: {
     width: 42,
@@ -580,6 +735,49 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     maxWidth: 260,
     marginBottom: SPACING.sm,
+  },
+  promptBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.32)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: SPACING.lg,
+  },
+  promptWrap: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  promptCard: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: 20,
+    paddingTop: SPACING.lg,
+  },
+  promptTitle: {
+    textAlign: 'center',
+    marginBottom: SPACING.md,
+  },
+  promptInput: {
+    minHeight: 44,
+    borderWidth: 1,
+    borderRadius: 12,
+    marginHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.md,
+    fontSize: 17,
+  },
+  promptActions: {
+    marginTop: SPACING.lg,
+    minHeight: 56,
+    borderTopWidth: 1,
+    flexDirection: 'row',
+  },
+  promptActionButton: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  promptActionButtonDivider: {
+    borderRightWidth: 1,
   },
   fabButton: {
     position: 'absolute',
