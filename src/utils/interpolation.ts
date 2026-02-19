@@ -106,7 +106,22 @@ const resolveParamValue = (
   const rawProgress = (timeMs - prev.timeMs) / duration;
   const t = interpolationProgress(prev.interpolation, rawProgress);
 
-  return lerp(previousValue, nextValue, t);
+  const interpolated = lerp(previousValue, nextValue, t);
+
+  switch (parameter) {
+    case 'x':
+    case 'y':
+    case 'width':
+    case 'height':
+    case 'strength':
+    case 'feather':
+    case 'opacity':
+    case 'cornerRadius':
+      return clamp(interpolated, 0, 1);
+    case 'rotation':
+    default:
+      return Number.isFinite(interpolated) ? interpolated : fallback;
+  }
 };
 
 export const interpolateTrackValuesAtTime = (

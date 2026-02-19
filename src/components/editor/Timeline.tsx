@@ -11,6 +11,7 @@ import Animated, {
   ZoomIn,
   ZoomOut,
   runOnJS,
+  useFrameCallback,
   useAnimatedStyle,
   useSharedValue,
   withSpring,
@@ -29,6 +30,7 @@ import { AppText } from '../common/AppText';
 interface TimelineProps {
   durationMs: number;
   playheadMs: number;
+  paused: boolean;
   zoom: number;
   expanded: boolean;
   precisionMode: boolean;
@@ -258,6 +260,7 @@ const TimelineTrackLane: React.FC<TimelineTrackLaneProps> = ({
 export const Timeline: React.FC<TimelineProps> = ({
   durationMs,
   playheadMs,
+  paused,
   zoom,
   expanded,
   precisionMode,
@@ -281,6 +284,12 @@ export const Timeline: React.FC<TimelineProps> = ({
   const zoomStart = useSharedValue(zoom);
   const snapPulse = useSharedValue(0);
   const playheadVisualMs = useSharedValue(playheadMs);
+  const pausedState = useSharedValue(paused ? 1 : 0);
+  const scrubbingState = useSharedValue(0);
+  const syncPlayheadMs = useSharedValue(playheadMs);
+  const syncPending = useSharedValue(1);
+  const playbackAnchorMs = useSharedValue(playheadMs);
+  const playbackAnchorTimestampMs = useSharedValue(0);
   const scrubFrameCount = useSharedValue(0);
   const [isScrubbing, setIsScrubbing] = useState(false);
 
@@ -314,14 +323,39 @@ export const Timeline: React.FC<TimelineProps> = ({
   }, [markerTimes, playheadMs]);
 
   useEffect(() => {
-    if (!isScrubbing) {
-      playheadVisualMs.value = playheadMs;
+    pausedState.value = paused ? 1 : 0;
+  }, [paused, pausedState]);
+
+  useEffect(() => {
+    if (isScrubbing) {
+      return;
     }
-  }, [isScrubbing, playheadMs, playheadVisualMs]);
+    syncPlayheadMs.value = playheadMs;
+    syncPending.value = 1;
+  }, [isScrubbing, playheadMs, syncPending, syncPlayheadMs]);
+
+  useFrameCallback(frameInfo => {
+    const timestamp = frameInfo.timestamp ?? 0;
+    if (syncPending.value === 1) {
+      const synced = clamp(syncPlayheadMs.value, 0, safeDuration);
+      playbackAnchorMs.value = synced;
+      playbackAnchorTimestampMs.value = timestamp;
+      playheadVisualMs.value = synced;
+      syncPending.value = 0;
+    }
+
+    if (scrubbingState.value === 1 || pausedState.value === 1) {
+      return;
+    }
+
+    const elapsedMs = Math.max(0, timestamp - playbackAnchorTimestampMs.value);
+    playheadVisualMs.value = clamp(playbackAnchorMs.value + elapsedMs, 0, safeDuration);
+  }, true);
 
   const scrubPan = Gesture.Pan()
     .onStart(() => {
       panStartPlayhead.value = playheadVisualMs.value;
+      scrubbingState.value = 1;
       scrubFrameCount.value = 0;
       runOnJS(setIsScrubbing)(true);
     })
@@ -342,9 +376,12 @@ export const Timeline: React.FC<TimelineProps> = ({
       }
 
       playheadVisualMs.value = target;
+      syncPlayheadMs.value = target;
+      syncPending.value = 1;
       runOnJS(onPlayheadChange)(target, false);
     })
     .onFinalize(() => {
+      scrubbingState.value = 0;
       runOnJS(setIsScrubbing)(false);
     });
 

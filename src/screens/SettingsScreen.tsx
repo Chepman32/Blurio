@@ -6,7 +6,6 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import type { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Circle } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
@@ -25,7 +24,6 @@ import {
 import { useAppTheme } from '../theme';
 import { useEditorStore, useProjectList } from '../store';
 import { estimateProjectCacheSizeBytes } from '../utils';
-import type { RootStackParamList } from '../types';
 
 const formatBytes = (bytes: number): string => {
   if (bytes <= 0) {
@@ -38,9 +36,7 @@ const formatBytes = (bytes: number): string => {
   return `${value.toFixed(exponent === 0 ? 0 : 1)} ${units[exponent]}`;
 };
 
-type Props = NativeStackScreenProps<RootStackParamList, 'Settings'>;
-
-export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
+export const SettingsScreen: React.FC = () => {
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
 
@@ -82,7 +78,9 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}>
           <GlassCard style={styles.sectionCard}>
-            <AppText variant="section">{STRINGS.settings.appearance}</AppText>
+            <AppText variant="section" style={styles.sectionTitle}>
+              {STRINGS.settings.appearance}
+            </AppText>
             <SegmentedControl
               value={settings.appearance}
               options={[
@@ -92,8 +90,9 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               ]}
               onChange={setAppearance}
               accessibilityLabel={STRINGS.settings.appearance}
+              size="large"
             />
-            <AppText variant="micro" color={colors.textSecondary}>
+            <AppText variant="bodyStrong" color={colors.textSecondary}>
               {STRINGS.settings.accentColor}
             </AppText>
             <View style={styles.colorRow}>
@@ -111,7 +110,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
                         borderColor: active ? colors.textPrimary : 'transparent',
                       },
                     ]}>
-                    {active ? <Circle size={12} color="#fff" fill="#fff" /> : null}
+                    {active ? <Circle size={16} color="#fff" fill="#fff" /> : null}
                   </TouchableOpacity>
                 );
               })}
@@ -119,7 +118,9 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           </GlassCard>
 
           <GlassCard style={styles.sectionCard}>
-            <AppText variant="section">{STRINGS.settings.motion}</AppText>
+            <AppText variant="section" style={styles.sectionTitle}>
+              {STRINGS.settings.motion}
+            </AppText>
             <SegmentedControl
               value={settings.reduceMotionOverride}
               options={[
@@ -129,11 +130,14 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               ]}
               onChange={setReduceMotionOverride}
               accessibilityLabel={STRINGS.settings.motion}
+              size="large"
             />
           </GlassCard>
 
           <GlassCard style={styles.sectionCard}>
-            <AppText variant="section">{STRINGS.settings.preview}</AppText>
+            <AppText variant="section" style={styles.sectionTitle}>
+              {STRINGS.settings.preview}
+            </AppText>
             <SegmentedControl
               value={settings.previewQuality}
               options={[
@@ -143,6 +147,7 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
               ]}
               onChange={setPreviewQuality}
               accessibilityLabel={STRINGS.settings.previewQualityDefault}
+              size="large"
             />
             <SwitchRow
               title={STRINGS.settings.autoThumbs}
@@ -159,7 +164,9 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           </GlassCard>
 
           <GlassCard style={styles.sectionCard}>
-            <AppText variant="section">{STRINGS.settings.storage}</AppText>
+            <AppText variant="section" style={styles.sectionTitle}>
+              {STRINGS.settings.storage}
+            </AppText>
             <AppText variant="body" color={colors.textSecondary}>
               {STRINGS.settings.storageUsage}
             </AppText>
@@ -194,7 +201,9 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
           </GlassCard>
 
           <GlassCard style={styles.sectionCard}>
-            <AppText variant="section">{STRINGS.settings.about}</AppText>
+            <AppText variant="section" style={styles.sectionTitle}>
+              {STRINGS.settings.about}
+            </AppText>
             <AppText variant="micro" color={colors.textSecondary}>
               {STRINGS.settings.version}: 1.0.0
             </AppText>
@@ -203,14 +212,6 @@ export const SettingsScreen: React.FC<Props> = ({ navigation }) => {
             </AppText>
           </GlassCard>
         </ScrollView>
-
-        <BlurButton
-          label={STRINGS.common.done}
-          onPress={() => navigation.goBack()}
-          accessibilityLabel={STRINGS.common.done}
-          variant="secondary"
-          style={styles.bottomButton}
-        />
       </View>
     </GradientBackground>
   );
@@ -231,23 +232,24 @@ const styles = StyleSheet.create({
     paddingBottom: SPACING.md,
   },
   sectionCard: {
-    gap: SPACING.sm,
+    gap: SPACING.md,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    lineHeight: 24,
   },
   colorRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: SPACING.xs,
+    gap: SPACING.sm,
   },
   colorSwatch: {
-    width: 28,
-    height: 28,
-    borderRadius: 16,
-    borderWidth: 2,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    borderWidth: 3,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  bottomButton: {
-    marginTop: SPACING.md,
   },
   cleanTrashButton: {
     marginTop: SPACING.xs,

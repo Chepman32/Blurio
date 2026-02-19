@@ -637,6 +637,7 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
         <Timeline
           durationMs={project.video.durationMs}
           playheadMs={ui.playheadMs}
+          paused={paused}
           zoom={ui.timelineZoom}
           expanded={ui.timelineExpanded}
           precisionMode={ui.timelinePrecisionMode}

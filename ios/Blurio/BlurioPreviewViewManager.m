@@ -7,7 +7,7 @@ RCT_EXPORT_VIEW_PROPERTY(paused, BOOL)
 RCT_EXPORT_VIEW_PROPERTY(quality, NSString)
 RCT_EXPORT_VIEW_PROPERTY(renderState, NSString)
 RCT_EXPORT_VIEW_PROPERTY(onReady, RCTDirectEventBlock)
-RCT_EXPORT_VIEW_PROPERTY(onTimeSync, RCTBubblingEventBlock)
+RCT_EXPORT_VIEW_PROPERTY(onTimeSync, RCTDirectEventBlock)
 RCT_EXPORT_VIEW_PROPERTY(onPreviewError, RCTBubblingEventBlock)
 
 @end

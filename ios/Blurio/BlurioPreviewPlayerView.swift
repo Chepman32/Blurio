@@ -7,7 +7,7 @@ final class BlurioPreviewPlayerView: UIView {
   // MARK: - RCT event blocks
 
   @objc var onReady: RCTDirectEventBlock?
-  @objc var onTimeSync: RCTBubblingEventBlock?
+  @objc var onTimeSync: RCTDirectEventBlock?
   @objc var onPreviewError: RCTBubblingEventBlock?
 
   // MARK: - Props
@@ -39,6 +39,7 @@ final class BlurioPreviewPlayerView: UIView {
   private var statusObservation: NSKeyValueObservation?
   private var loadedUri: String = ""
   private var didReachEnd = false
+  private var lastAppliedPlayheadMs: Double = -1
 
   /// Container for blur overlay views, sits on top of the player layer
   private let blurContainer = UIView()
@@ -64,7 +65,10 @@ final class BlurioPreviewPlayerView: UIView {
     super.layoutSubviews()
     playerLayer?.frame = bounds
     blurContainer.frame = bounds
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
     layoutBlurRegions()
+    CATransaction.commit()
   }
 
   // MARK: - Render state
@@ -95,15 +99,64 @@ final class BlurioPreviewPlayerView: UIView {
   private func applyRenderState() {
     guard !renderState.isEmpty,
           let data = renderState.data(using: .utf8),
-          let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-          let tracksJson = json["tracks"] as? [[String: Any]] else {
+          let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+      removeAllBlurRegions()
+      return
+    }
+
+    let playheadMs = doubleValue(json["playheadMs"])
+    if shouldSkipStaleRenderState(nextPlayheadMs: playheadMs) {
+      return
+    }
+
+    guard let tracksJson = json["tracks"] as? [[String: Any]] else {
       removeAllBlurRegions()
       return
     }
 
     parsedTracks = tracksJson.compactMap { parseTrack($0) }
+    lastAppliedPlayheadMs = playheadMs
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
     reconcileBlurRegions()
     layoutBlurRegions()
+    CATransaction.commit()
+  }
+
+  private func shouldSkipStaleRenderState(nextPlayheadMs: Double) -> Bool {
+    guard !paused, lastAppliedPlayheadMs >= 0 else { return false }
+
+    // Ignore small backward time steps while playing; these are usually delayed bridge updates.
+    let deltaMs = nextPlayheadMs - lastAppliedPlayheadMs
+    guard deltaMs < -24 else { return false }
+
+    // Allow large jumps because they are likely explicit user seeks.
+    if abs(deltaMs) > 450 {
+      return false
+    }
+
+    // Allow natural loop transitions near the end of the media.
+    if isLikelyLoopTransition(fromMs: lastAppliedPlayheadMs, toMs: nextPlayheadMs) {
+      return false
+    }
+
+    return true
+  }
+
+  private func isLikelyLoopTransition(fromMs: Double, toMs: Double) -> Bool {
+    guard let item = player?.currentItem else { return false }
+    let durationSec = CMTimeGetSeconds(item.duration)
+    guard durationSec.isFinite, durationSec > 0 else { return false }
+
+    let durationMs = durationSec * 1000.0
+    return fromMs >= durationMs * 0.85 && toMs <= durationMs * 0.15
+  }
+
+  private func doubleValue(_ value: Any?) -> Double {
+    if let n = value as? NSNumber { return n.doubleValue }
+    if let n = value as? Double { return n }
+    if let n = value as? Int { return Double(n) }
+    return 0
   }
 
   private func parseTrack(_ json: [String: Any]) -> ParsedTrack? {
@@ -191,9 +244,13 @@ final class BlurioPreviewPlayerView: UIView {
       let h = max(track.values.height * containerSize.height, 24)
       let x = min(max(track.values.x * containerSize.width, 0), max(0, containerSize.width - w))
       let y = min(max(track.values.y * containerSize.height, 0), max(0, containerSize.height - h))
+      let rotation = track.values.rotation * .pi / 180
 
-      regionView.frame = CGRect(x: x, y: y, width: w, height: h)
-      regionView.transform = CGAffineTransform(rotationAngle: track.values.rotation * .pi / 180)
+      // Avoid frame jitter: assign geometry in identity transform space, then rotate.
+      regionView.transform = .identity
+      regionView.bounds = CGRect(x: 0, y: 0, width: w, height: h)
+      regionView.center = CGPoint(x: x + w / 2, y: y + h / 2)
+      regionView.transform = CGAffineTransform(rotationAngle: rotation)
       regionView.applyMask(
         type: track.type,
         cornerRadius: track.values.cornerRadius,
@@ -208,6 +265,7 @@ final class BlurioPreviewPlayerView: UIView {
     }
     blurRegions.removeAll()
     parsedTracks = []
+    lastAppliedPlayheadMs = -1
   }
 
   // MARK: - Video loading
@@ -215,6 +273,7 @@ final class BlurioPreviewPlayerView: UIView {
   private func loadVideo() {
     cleanupPlayer()
     loadedUri = sourceUri
+    lastAppliedPlayheadMs = -1
     backgroundColor = .clear
 
     guard !sourceUri.isEmpty else { return }
@@ -244,13 +303,13 @@ final class BlurioPreviewPlayerView: UIView {
       }
     }
 
-    // Periodic time sync (~30 fps)
-    let interval = CMTime(value: 1, timescale: 30)
+    // Periodic time sync (~60 fps) for smooth UI interpolation in JS.
+    let interval = CMTime(seconds: 1.0 / 60.0, preferredTimescale: 600)
     timeObserverToken = newPlayer.addPeriodicTimeObserver(
       forInterval: interval,
       queue: .main
     ) { [weak self] time in
-      let ms = Int(CMTimeGetSeconds(time) * 1000)
+      let ms = CMTimeGetSeconds(time) * 1000.0
       self?.onTimeSync?(["timeMs": ms])
     }
 
@@ -403,6 +462,9 @@ private final class BlurRegionView: UIView {
       path = UIBezierPath(roundedRect: rect, cornerRadius: cr)
     }
 
+    CATransaction.begin()
+    CATransaction.setDisableActions(true)
+
     if maskLayer == nil {
       maskLayer = CAShapeLayer()
       layer.mask = maskLayer
@@ -422,6 +484,8 @@ private final class BlurRegionView: UIView {
     } else {
       maskLayer?.shadowOpacity = 0
     }
+
+    CATransaction.commit()
   }
 
   override func layoutSubviews() {

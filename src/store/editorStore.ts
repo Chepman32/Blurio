@@ -423,7 +423,13 @@ const applySelectedTrackValuesAtPlayhead = (
     return null;
   }
 
-  const existingKeyframe = findKeyframeAtPlayhead(track, state.ui.playheadMs);
+  // If the track has exactly one keyframe, always update it in-place rather than
+  // creating a second keyframe at the current playhead.  This prevents accidental
+  // "animation" keyframes when the user simply repositions a static blur region.
+  const existingKeyframe =
+    track.keyframes.length === 1
+      ? track.keyframes[0]
+      : findKeyframeAtPlayhead(track, state.ui.playheadMs);
   const updatedProject: Project = {
     ...project,
     tracks: project.tracks.map(candidate => {

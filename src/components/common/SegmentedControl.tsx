@@ -14,6 +14,7 @@ interface SegmentedControlProps<T extends string> {
   options: SegmentedOption<T>[];
   onChange: (value: T) => void;
   accessibilityLabel: string;
+  size?: 'default' | 'large';
 }
 
 export const SegmentedControl = <T extends string>({
@@ -21,13 +22,19 @@ export const SegmentedControl = <T extends string>({
   options,
   onChange,
   accessibilityLabel,
+  size = 'default',
 }: SegmentedControlProps<T>) => {
   const { colors } = useAppTheme();
+  const large = size === 'large';
 
   return (
     <View
       accessibilityLabel={accessibilityLabel}
-      style={[styles.container, { backgroundColor: `${colors.card}DD`, borderColor: colors.cardBorder }]}>
+      style={[
+        styles.container,
+        large && styles.largeContainer,
+        { backgroundColor: `${colors.card}DD`, borderColor: colors.cardBorder },
+      ]}>
       {options.map(option => {
         const selected = option.value === value;
         return (
@@ -38,13 +45,14 @@ export const SegmentedControl = <T extends string>({
             onPress={() => onChange(option.value)}
             style={[
               styles.option,
+              large && styles.largeOption,
               {
                 backgroundColor: selected ? `${colors.accent}22` : 'transparent',
                 borderColor: selected ? `${colors.accent}55` : 'transparent',
               },
             ]}>
             <AppText
-              variant="micro"
+              variant={large ? 'bodyStrong' : 'micro'}
               color={selected ? colors.accent : colors.textSecondary}>
               {option.label}
             </AppText>
@@ -63,6 +71,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: SPACING.xs,
   },
+  largeContainer: {
+    padding: 6,
+    gap: SPACING.sm,
+  },
   option: {
     flex: 1,
     borderRadius: RADIUS.control,
@@ -70,5 +82,8 @@ const styles = StyleSheet.create({
     minHeight: 32,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  largeOption: {
+    minHeight: 52,
   },
 });

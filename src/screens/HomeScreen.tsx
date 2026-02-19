@@ -506,8 +506,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   settingsIcon: {
-    width: 22,
-    height: 22,
+    width: 36,
+    height: 36,
   },
   listContent: {
     paddingBottom: SPACING.md,
