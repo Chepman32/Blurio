@@ -139,7 +139,7 @@ const emptyUIState = (settings: StoredSettings): UIState => ({
   canvasZoom: 1,
   canvasPanX: 0,
   canvasPanY: 0,
-  activePanel: 'addRegion',
+  activePanel: 'regions',
   isSheetExpanded: false,
   showGuides: true,
   showThumbnails: true,

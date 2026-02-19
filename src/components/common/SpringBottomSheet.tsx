@@ -18,6 +18,7 @@ interface SpringBottomSheetProps {
   expandedHeight: number;
   expanded: boolean;
   onExpandedChange: (expanded: boolean) => void;
+  headerRight?: React.ReactNode;
   children: React.ReactNode;
 }
 
@@ -30,6 +31,7 @@ export const SpringBottomSheet: React.FC<SpringBottomSheetProps> = ({
   expandedHeight,
   expanded,
   onExpandedChange,
+  headerRight,
   children,
 }) => {
   const { colors } = useAppTheme();
@@ -115,9 +117,13 @@ export const SpringBottomSheet: React.FC<SpringBottomSheetProps> = ({
         ]}>
         <View style={styles.handleRow}>
           <View style={[styles.handle, { backgroundColor: colors.textMuted }]} />
-          <AppText variant="section" color={colors.textSecondary}>
-            {title}
-          </AppText>
+          <View style={styles.titleRow}>
+            <View style={styles.sideSpacer} />
+            <AppText variant="section" color={colors.textSecondary}>
+              {title}
+            </AppText>
+            <View style={styles.rightSlot}>{headerRight}</View>
+          </View>
         </View>
         <View style={styles.content}>{children}</View>
       </Animated.View>
@@ -140,6 +146,23 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 10,
     gap: 8,
+  },
+  titleRow: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
+  sideSpacer: {
+    width: 28,
+    height: 28,
+  },
+  rightSlot: {
+    width: 28,
+    height: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   handle: {
     width: 42,

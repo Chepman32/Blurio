@@ -3,12 +3,20 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import DraggableFlatList, {
   type RenderItemParams,
 } from 'react-native-draggable-flatlist';
-import { Eye, EyeOff, GripVertical, Lock, LockOpen, Trash2 } from 'lucide-react-native';
+import {
+  Eye,
+  EyeOff,
+  GripVertical,
+  Lock,
+  LockOpen,
+  Trash2,
+} from 'lucide-react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import type { ID, Track } from '../../../types';
-import { SPACING } from '../../../constants';
+import { SPACING, STRINGS } from '../../../constants';
 import { useAppTheme } from '../../../theme';
 import { AppText } from '../../common/AppText';
+import { AnimatedSlider } from '../AnimatedSlider';
 
 interface RegionsPanelProps {
   tracks: Track[];
@@ -18,6 +26,11 @@ interface RegionsPanelProps {
   onToggleLock: (trackId: ID) => void;
   onRemoveTrack: (trackId: ID) => void;
   onReorderTracks: (orderedTrackIds: ID[]) => void;
+  hasSelection: boolean;
+  strength: number;
+  onChangeStrength: (strength: number) => void;
+  onStrengthChangeStart?: () => void;
+  onStrengthChangeEnd?: () => void;
 }
 
 export const RegionsPanel: React.FC<RegionsPanelProps> = ({
@@ -28,6 +41,11 @@ export const RegionsPanel: React.FC<RegionsPanelProps> = ({
   onToggleLock,
   onRemoveTrack,
   onReorderTracks,
+  hasSelection,
+  strength,
+  onChangeStrength,
+  onStrengthChangeStart,
+  onStrengthChangeEnd,
 }) => {
   const { colors } = useAppTheme();
 
@@ -55,8 +73,8 @@ export const RegionsPanel: React.FC<RegionsPanelProps> = ({
             {
               backgroundColor: selected ? `${colors.accent}1F` : `${colors.card}AA`,
               borderColor: selected ? `${colors.accent}66` : colors.cardBorder,
-              opacity: isActive ? 0.85 : 1,
             },
+            isActive ? styles.rowActive : null,
           ]}>
           <GripVertical size={18} color={colors.textMuted} />
           <View style={styles.titleWrap}>
@@ -93,26 +111,59 @@ export const RegionsPanel: React.FC<RegionsPanelProps> = ({
   };
 
   return (
-    <DraggableFlatList
-      data={tracks}
-      keyExtractor={item => item.id}
-      renderItem={renderItem}
-      activationDistance={18}
-      containerStyle={styles.list}
-      contentContainerStyle={styles.content}
-      onDragEnd={({ data }) => onReorderTracks(data.map(item => item.id))}
-    />
+    <View style={styles.container}>
+      <DraggableFlatList
+        data={tracks}
+        keyExtractor={item => item.id}
+        renderItem={renderItem}
+        activationDistance={18}
+        containerStyle={styles.list}
+        contentContainerStyle={styles.content}
+        onDragEnd={({ data }) => onReorderTracks(data.map(item => item.id))}
+      />
+      <View style={styles.footer}>
+        {hasSelection ? (
+          <View
+            style={[
+              styles.sliderWrap,
+              { borderColor: colors.cardBorder, backgroundColor: `${colors.card}66` },
+            ]}>
+            <AnimatedSlider
+              label={STRINGS.params.strength}
+              value={strength}
+              onChange={onChangeStrength}
+              onChangeStart={onStrengthChangeStart}
+              onChangeEnd={onStrengthChangeEnd}
+              accessibilityLabel={STRINGS.params.strength}
+            />
+          </View>
+        ) : null}
+      </View>
+    </View>
   );
 };
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+  },
   list: {
     flex: 1,
   },
   content: {
     gap: SPACING.xs,
     paddingHorizontal: SPACING.md,
+    paddingBottom: SPACING.xs,
+  },
+  footer: {
+    gap: SPACING.sm,
+    paddingHorizontal: SPACING.md,
     paddingBottom: SPACING.md,
+  },
+  sliderWrap: {
+    borderWidth: 1,
+    borderRadius: 12,
+    padding: SPACING.sm,
   },
   row: {
     minHeight: 50,
@@ -122,6 +173,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: SPACING.sm,
     gap: SPACING.xs,
+  },
+  rowActive: {
+    opacity: 0.85,
   },
   titleWrap: {
     flex: 1,

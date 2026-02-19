@@ -6,24 +6,13 @@ import type { RegionType } from '../../../types';
 import { useAppTheme } from '../../../theme';
 import { BlurButton } from '../../common/BlurButton';
 import { IconActionButton } from '../../common/IconActionButton';
-import { AnimatedSlider } from '../AnimatedSlider';
 
 interface AddRegionPanelProps {
   onAddRegion: (type: RegionType, template?: 'face' | 'plate') => void;
-  hasSelection: boolean;
-  strength: number;
-  onChangeStrength: (strength: number) => void;
-  onStrengthChangeStart?: () => void;
-  onStrengthChangeEnd?: () => void;
 }
 
 export const AddRegionPanel: React.FC<AddRegionPanelProps> = ({
   onAddRegion,
-  hasSelection,
-  strength,
-  onChangeStrength,
-  onStrengthChangeStart,
-  onStrengthChangeEnd,
 }) => {
   const { colors } = useAppTheme();
 
@@ -79,16 +68,6 @@ export const AddRegionPanel: React.FC<AddRegionPanelProps> = ({
           onPress={() => onAddRegion('roundedRect')}
           accessibilityLabel={STRINGS.editor.addRegion}
         />
-        {hasSelection ? (
-          <AnimatedSlider
-            label={STRINGS.params.strength}
-            value={strength}
-            onChange={onChangeStrength}
-            onChangeStart={onStrengthChangeStart}
-            onChangeEnd={onStrengthChangeEnd}
-            accessibilityLabel={STRINGS.params.strength}
-          />
-        ) : null}
       </View>
     </View>
   );

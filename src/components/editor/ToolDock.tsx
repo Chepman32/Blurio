@@ -4,7 +4,6 @@ import {
   Eye,
   KeyRound,
   Layers,
-  PlusSquare,
   Redo2,
   SlidersHorizontal,
   Undo2,
@@ -27,7 +26,6 @@ const PANEL_ITEMS: Array<{
   label: string;
   icon: LucideIcon;
 }> = [
-  { panel: 'addRegion', label: STRINGS.editor.addRegion, icon: PlusSquare },
   { panel: 'regions', label: STRINGS.editor.regions, icon: Layers },
   { panel: 'params', label: STRINGS.editor.params, icon: SlidersHorizontal },
   { panel: 'keyframes', label: STRINGS.editor.keyframes, icon: KeyRound },

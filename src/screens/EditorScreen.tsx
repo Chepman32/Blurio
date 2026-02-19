@@ -15,6 +15,7 @@ import {
   Layers,
   Pause,
   Play,
+  Plus,
   PlusSquare,
   Redo2,
   Share2,
@@ -156,6 +157,7 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
   } | null>(null);
   const [saveTemplateModalVisible, setSaveTemplateModalVisible] = useState(false);
   const [applyTemplateModalVisible, setApplyTemplateModalVisible] = useState(false);
+  const [addRegionModalVisible, setAddRegionModalVisible] = useState(false);
   const [templateName, setTemplateName] = useState('');
   const [templateCategory, setTemplateCategory] = useState<string>(
     STRINGS.editor.templateDefaultCategory,
@@ -323,6 +325,15 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
     });
   }, [applyModalBackdropProgress, applyModalProgress]);
 
+  const openAddRegionModal = useCallback(() => {
+    setSheetExpanded(false);
+    setAddRegionModalVisible(true);
+  }, [setSheetExpanded]);
+
+  const closeAddRegionModal = useCallback(() => {
+    setAddRegionModalVisible(false);
+  }, []);
+
   useEffect(() => {
     if (!saveTemplateModalVisible) {
       return;
@@ -379,6 +390,8 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
     ],
   }));
 
+  const activePanel = ui.activePanel === 'addRegion' ? 'regions' : ui.activePanel;
+
   if (!project || !renderState) {
     return (
       <GradientBackground>
@@ -390,26 +403,7 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
   }
 
   const renderPanel = () => {
-    switch (ui.activePanel) {
-      case 'addRegion':
-        return (
-          <AddRegionPanel
-            onAddRegion={(type, template) => {
-              addTrack(type, template);
-              impact();
-            }}
-            hasSelection={Boolean(selectedTrack)}
-            strength={selectedStrength}
-            onStrengthChangeStart={beginTrackValueInteraction}
-            onChangeStrength={strength => {
-              if (!Number.isFinite(strength)) {
-                return;
-              }
-              updateSelectedTrackValuesLive({ strength });
-            }}
-            onStrengthChangeEnd={endTrackValueInteraction}
-          />
-        );
+    switch (activePanel) {
       case 'regions':
         return (
           <RegionsPanel
@@ -423,6 +417,16 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
               warning();
             }}
             onReorderTracks={reorderTracks}
+            hasSelection={Boolean(selectedTrack)}
+            strength={selectedStrength}
+            onStrengthChangeStart={beginTrackValueInteraction}
+            onChangeStrength={strength => {
+              if (!Number.isFinite(strength)) {
+                return;
+              }
+              updateSelectedTrackValuesLive({ strength });
+            }}
+            onStrengthChangeEnd={endTrackValueInteraction}
           />
         );
       case 'params':
@@ -654,21 +658,37 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
         />
 
         <ToolDock
-          activePanel={ui.activePanel}
+          activePanel={activePanel}
           onSelectPanel={setActivePanel}
           onUndo={undo}
           onRedo={redo}
         />
 
-        <SpringBottomSheet
-          title={ui.activePanel}
-          collapsedHeight={MIN_SHEET_HEIGHT}
-          midHeight={MID_SHEET_HEIGHT}
-          expandedHeight={MAX_SHEET_HEIGHT}
-          expanded={ui.isSheetExpanded}
-          onExpandedChange={setSheetExpanded}>
-          {renderPanel()}
-        </SpringBottomSheet>
+        {!addRegionModalVisible ? (
+          <SpringBottomSheet
+            title={activePanel}
+            collapsedHeight={MIN_SHEET_HEIGHT}
+            midHeight={MID_SHEET_HEIGHT}
+            expandedHeight={MAX_SHEET_HEIGHT}
+            expanded={ui.isSheetExpanded}
+            onExpandedChange={setSheetExpanded}
+            headerRight={
+              activePanel === 'regions' ? (
+                <TouchableOpacity
+                  accessibilityRole="button"
+                  accessibilityLabel={STRINGS.accessibility.addRegionButton}
+                  onPress={openAddRegionModal}
+                  style={[
+                    styles.sheetHeaderAction,
+                    { borderColor: colors.cardBorder, backgroundColor: colors.card },
+                  ]}>
+                  <Plus size={14} color={colors.textPrimary} />
+                </TouchableOpacity>
+              ) : null
+            }>
+            {renderPanel()}
+          </SpringBottomSheet>
+        ) : null}
 
         <ActionSheetModal
           visible={Boolean(markerContext)}
@@ -710,6 +730,32 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
               : []
           }
         />
+
+        <Modal
+          transparent
+          animationType="fade"
+          visible={addRegionModalVisible}
+          onRequestClose={closeAddRegionModal}>
+          <View style={styles.modalRoot}>
+            <View style={styles.modalDimmer} />
+            <Pressable style={StyleSheet.absoluteFill} onPress={closeAddRegionModal} />
+            <View
+              style={[
+                styles.modalCard,
+                styles.addRegionModalCard,
+                { backgroundColor: colors.sheet, borderColor: colors.cardBorder },
+              ]}>
+              <AppText variant="section">{STRINGS.editor.addRegion}</AppText>
+              <AddRegionPanel
+                onAddRegion={(type, template) => {
+                  addTrack(type, template);
+                  impact();
+                  closeAddRegionModal();
+                }}
+              />
+            </View>
+          </View>
+        </Modal>
 
         <Modal
           transparent
@@ -941,6 +987,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: SPACING.xs,
   },
+  sheetHeaderAction: {
+    width: 28,
+    height: 28,
+    borderRadius: 8,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   canvasWrap: {
     flex: 1,
     minHeight: 220,
@@ -965,6 +1019,9 @@ const styles = StyleSheet.create({
   },
   applyModalCard: {
     maxHeight: 420,
+  },
+  addRegionModalCard: {
+    maxWidth: 460,
   },
   inputGroup: {
     gap: SPACING.xs,
