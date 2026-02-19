@@ -27,7 +27,15 @@ export type InterpolationType =
   | 'spring'
   | 'hold';
 
-export type BlendMode = 'normal' | 'frosted';
+export type BlendMode =
+  | 'gaussian'
+  | 'bokeh'
+  | 'motionBlur'
+  | 'bilateral'
+  | 'smartBlur'
+  | 'radial'
+  | 'normal'
+  | 'frosted';
 
 export type ExportCodec = 'h264' | 'hevc';
 

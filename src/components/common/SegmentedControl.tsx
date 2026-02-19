@@ -15,6 +15,7 @@ interface SegmentedControlProps<T extends string> {
   onChange: (value: T) => void;
   accessibilityLabel: string;
   size?: 'default' | 'large';
+  wrap?: boolean;
 }
 
 export const SegmentedControl = <T extends string>({
@@ -23,6 +24,7 @@ export const SegmentedControl = <T extends string>({
   onChange,
   accessibilityLabel,
   size = 'default',
+  wrap = false,
 }: SegmentedControlProps<T>) => {
   const { colors } = useAppTheme();
   const large = size === 'large';
@@ -33,6 +35,7 @@ export const SegmentedControl = <T extends string>({
       style={[
         styles.container,
         large && styles.largeContainer,
+        wrap && styles.wrapContainer,
         { backgroundColor: `${colors.card}DD`, borderColor: colors.cardBorder },
       ]}>
       {options.map(option => {
@@ -46,6 +49,7 @@ export const SegmentedControl = <T extends string>({
             style={[
               styles.option,
               large && styles.largeOption,
+              wrap && styles.wrapOption,
               {
                 backgroundColor: selected ? `${colors.accent}22` : 'transparent',
                 borderColor: selected ? `${colors.accent}55` : 'transparent',
@@ -75,6 +79,9 @@ const styles = StyleSheet.create({
     padding: 6,
     gap: SPACING.sm,
   },
+  wrapContainer: {
+    flexWrap: 'wrap',
+  },
   option: {
     flex: 1,
     borderRadius: RADIUS.control,
@@ -85,5 +92,10 @@ const styles = StyleSheet.create({
   },
   largeOption: {
     minHeight: 52,
+  },
+  wrapOption: {
+    flexGrow: 0,
+    minWidth: 104,
+    paddingHorizontal: SPACING.sm,
   },
 });

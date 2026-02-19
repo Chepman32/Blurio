@@ -51,7 +51,7 @@ export const createTrack = (
   muted: false,
   color,
   zIndex,
-  blendMode: 'normal',
+  blendMode: 'gaussian',
   pathPoints: [],
   keyframes: [createBaseKeyframe(0, values)],
 });

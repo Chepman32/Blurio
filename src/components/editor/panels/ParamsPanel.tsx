@@ -15,6 +15,18 @@ interface ParamsPanelProps {
   onChangeBlendMode: (blendMode: BlendMode) => void;
 }
 
+type BlurModeTab = Exclude<BlendMode, 'normal' | 'frosted'>;
+
+const resolveActiveBlurMode = (blendMode: BlendMode): BlurModeTab => {
+  if (blendMode === 'normal') {
+    return 'gaussian';
+  }
+  if (blendMode === 'frosted') {
+    return 'smartBlur';
+  }
+  return blendMode;
+};
+
 export const ParamsPanel: React.FC<ParamsPanelProps> = ({
   values,
   blendMode,
@@ -33,6 +45,8 @@ export const ParamsPanel: React.FC<ParamsPanelProps> = ({
     );
   }
 
+  const activeBlurMode = resolveActiveBlurMode(blendMode);
+
   return (
     <ScrollView
       style={styles.container}
@@ -45,14 +59,6 @@ export const ParamsPanel: React.FC<ParamsPanelProps> = ({
         onChangeStart={onBeginValueChange}
         onChangeEnd={onEndValueChange}
         accessibilityLabel={STRINGS.params.strength}
-      />
-      <AnimatedSlider
-        label={STRINGS.params.feather}
-        value={values.feather}
-        onChange={next => onChangeValues({ feather: next })}
-        onChangeStart={onBeginValueChange}
-        onChangeEnd={onEndValueChange}
-        accessibilityLabel={STRINGS.params.feather}
       />
       <AnimatedSlider
         label={STRINGS.params.opacity}
@@ -71,12 +77,17 @@ export const ParamsPanel: React.FC<ParamsPanelProps> = ({
         accessibilityLabel={STRINGS.params.cornerRadius}
       />
       <SegmentedControl
-        value={blendMode}
+        value={activeBlurMode}
         options={[
-          { label: STRINGS.params.normal, value: 'normal' },
-          { label: STRINGS.params.frosted, value: 'frosted' },
+          { label: STRINGS.params.gaussian, value: 'gaussian' },
+          { label: STRINGS.params.bokeh, value: 'bokeh' },
+          { label: STRINGS.params.motionBlur, value: 'motionBlur' },
+          { label: STRINGS.params.bilateral, value: 'bilateral' },
+          { label: STRINGS.params.smartBlur, value: 'smartBlur' },
+          { label: STRINGS.params.radial, value: 'radial' },
         ]}
         accessibilityLabel={STRINGS.params.blendMode}
+        wrap
         onChange={onChangeBlendMode}
       />
     </ScrollView>

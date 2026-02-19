@@ -433,7 +433,13 @@ private final class BlurRegionView: UIView {
     effectView.effect = nil
 
     if clamped > 0.001 {
-      let blurStyle: UIBlurEffect.Style = blendMode == "frosted" ? .light : .regular
+      let blurStyle: UIBlurEffect.Style
+      switch blendMode {
+      case "bokeh", "smartBlur", "radial", "frosted":
+        blurStyle = .light
+      default:
+        blurStyle = .regular
+      }
       let blur = UIBlurEffect(style: blurStyle)
       let anim = UIViewPropertyAnimator(duration: 1, curve: .linear) { [weak self] in
         self?.effectView.effect = blur
