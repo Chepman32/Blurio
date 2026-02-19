@@ -42,16 +42,17 @@ export const SpringBottomSheet: React.FC<SpringBottomSheetProps> = ({
 
   const maxHeight = Math.min(expandedHeight, windowHeight * 0.82);
   const minTranslate = Math.max(windowHeight - maxHeight, 56);
-  const translateY = useSharedValue(windowHeight - midHeight);
-  const contextTranslate = useSharedValue(windowHeight - midHeight);
+  const collapsedTranslate = windowHeight - collapsedHeight;
+  const translateY = useSharedValue(collapsedTranslate);
+  const contextTranslate = useSharedValue(collapsedTranslate);
 
   useEffect(() => {
-    const target = expanded ? minTranslate : windowHeight - midHeight;
+    const target = expanded ? minTranslate : collapsedTranslate;
     translateY.value = withSpring(target, {
       damping: 18,
       stiffness: 190,
     });
-  }, [expanded, midHeight, minTranslate, translateY]);
+  }, [collapsedTranslate, expanded, minTranslate, translateY]);
 
   const resolveSnap = (position: number, velocityY: number): number => {
     'worklet';
@@ -59,10 +60,10 @@ export const SpringBottomSheet: React.FC<SpringBottomSheetProps> = ({
 
     const points = snapHeights.map(heightValue => windowHeight - heightValue);
     if (points.length === 0) {
-      return windowHeight - midHeight;
+      return collapsedTranslate;
     }
 
-    let nearest = points[0] ?? windowHeight - midHeight;
+    let nearest = points[0] ?? collapsedTranslate;
     let nearestDistance = Math.abs(projected - nearest);
 
     for (let i = 1; i < points.length; i += 1) {
@@ -87,9 +88,11 @@ export const SpringBottomSheet: React.FC<SpringBottomSheetProps> = ({
     })
     .onEnd(event => {
       const snap = resolveSnap(translateY.value, event.velocityY);
-      const isExpanded = snap <= windowHeight - midHeight - 40;
+      const isExpanded =
+        Math.abs(snap - minTranslate) < Math.abs(snap - collapsedTranslate);
+      const finalSnap = isExpanded ? minTranslate : collapsedTranslate;
 
-      translateY.value = withSpring(snap, {
+      translateY.value = withSpring(finalSnap, {
         damping: 17,
         stiffness: 180,
         velocity: event.velocityY,

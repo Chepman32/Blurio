@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
 import { SPACING, STRINGS } from '../../../constants';
 import type { BlendMode, KeyframeValues } from '../../../types';
 import { AnimatedSlider } from '../AnimatedSlider';
@@ -34,7 +34,10 @@ export const ParamsPanel: React.FC<ParamsPanelProps> = ({
   }
 
   return (
-    <View style={styles.container}>
+    <ScrollView
+      style={styles.container}
+      contentContainerStyle={styles.content}
+      showsVerticalScrollIndicator={false}>
       <AnimatedSlider
         label={STRINGS.params.strength}
         value={values.strength}
@@ -76,14 +79,17 @@ export const ParamsPanel: React.FC<ParamsPanelProps> = ({
         accessibilityLabel={STRINGS.params.blendMode}
         onChange={onChangeBlendMode}
       />
-    </View>
+    </ScrollView>
   );
 };
 
 const styles = StyleSheet.create({
   container: {
+    flex: 1,
+  },
+  content: {
     paddingHorizontal: SPACING.md,
-    paddingBottom: SPACING.md,
+    paddingBottom: SPACING.xl,
     gap: SPACING.sm,
   },
   empty: {

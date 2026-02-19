@@ -31,6 +31,7 @@ import Animated, {
 } from 'react-native-reanimated';
 import {
   AddRegionPanel,
+  AnimatedSlider,
   EditorCanvas,
   KeyframesPanel,
   ParamsPanel,
@@ -63,6 +64,8 @@ import { checkAssetAvailability } from '../utils';
 type Props = NativeStackScreenProps<RootStackParamList, 'Editor'>;
 
 const DEFAULT_TEMPLATE_CATEGORIES = ['Faces', 'Vehicles', 'Plates', 'People', 'Objects'] as const;
+const REGIONS_COLLAPSED_HEIGHT = 92;
+const PARAMS_EXPANDED_HEIGHT = 460;
 
 const templateTypeLabel = (type: RegionType): string => {
   switch (type) {
@@ -391,6 +394,12 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
   }));
 
   const activePanel = ui.activePanel === 'addRegion' ? 'regions' : ui.activePanel;
+  const collapsedSheetHeight =
+    activePanel === 'regions' || activePanel === 'params'
+      ? REGIONS_COLLAPSED_HEIGHT
+      : MIN_SHEET_HEIGHT;
+  const expandedSheetHeight =
+    activePanel === 'params' ? PARAMS_EXPANDED_HEIGHT : MAX_SHEET_HEIGHT;
 
   if (!project || !renderState) {
     return (
@@ -417,16 +426,6 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
               warning();
             }}
             onReorderTracks={reorderTracks}
-            hasSelection={Boolean(selectedTrack)}
-            strength={selectedStrength}
-            onStrengthChangeStart={beginTrackValueInteraction}
-            onChangeStrength={strength => {
-              if (!Number.isFinite(strength)) {
-                return;
-              }
-              updateSelectedTrackValuesLive({ strength });
-            }}
-            onStrengthChangeEnd={endTrackValueInteraction}
           />
         );
       case 'params':
@@ -663,13 +662,34 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
           onUndo={undo}
           onRedo={redo}
         />
+        {activePanel === 'regions' && selectedTrack ? (
+          <View
+            style={[
+              styles.strengthCard,
+              { borderColor: colors.cardBorder, backgroundColor: `${colors.card}CC` },
+            ]}>
+            <AnimatedSlider
+              label={STRINGS.params.strength}
+              value={selectedStrength}
+              onChange={strength => {
+                if (!Number.isFinite(strength)) {
+                  return;
+                }
+                updateSelectedTrackValuesLive({ strength });
+              }}
+              onChangeStart={beginTrackValueInteraction}
+              onChangeEnd={endTrackValueInteraction}
+              accessibilityLabel={STRINGS.params.strength}
+            />
+          </View>
+        ) : null}
 
         {!addRegionModalVisible ? (
           <SpringBottomSheet
             title={activePanel}
-            collapsedHeight={MIN_SHEET_HEIGHT}
+            collapsedHeight={collapsedSheetHeight}
             midHeight={MID_SHEET_HEIGHT}
-            expandedHeight={MAX_SHEET_HEIGHT}
+            expandedHeight={expandedSheetHeight}
             expanded={ui.isSheetExpanded}
             onExpandedChange={setSheetExpanded}
             headerRight={
@@ -998,6 +1018,12 @@ const styles = StyleSheet.create({
   canvasWrap: {
     flex: 1,
     minHeight: 220,
+  },
+  strengthCard: {
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: SPACING.sm,
+    marginBottom: SPACING.sm,
   },
   modalRoot: {
     flex: 1,
