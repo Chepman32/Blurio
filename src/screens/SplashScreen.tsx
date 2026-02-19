@@ -23,53 +23,88 @@ import { useHaptics, useReducedMotion } from '../hooks';
 type Props = NativeStackScreenProps<RootStackParamList, 'Splash'>;
 
 const { width } = Dimensions.get('window');
-
-const SHARD_COUNT = 42;
+const ICON_SIZE = Math.min(width * 0.48, 214);
+const PARTICLE_GRID = 9;
+const PARTICLE_COUNT = PARTICLE_GRID * PARTICLE_GRID;
+const ICON_PALETTE = [
+  '#3B1CA8',
+  '#4D21C2',
+  '#7E2BE2',
+  '#B93ED8',
+  '#E254BF',
+  '#FF6C95',
+  '#53B8FF',
+  '#2568D6',
+  '#EDEFF7',
+] as const;
 
 interface SplashShardModel {
   id: string;
-  x: number;
-  y: number;
+  tx: number;
+  ty: number;
+  orbitX: number;
+  orbitY: number;
   size: number;
   rotate: number;
+  color: string;
 }
 
-const shards: SplashShardModel[] = Array.from({ length: SHARD_COUNT }, (_, index) => {
-  const angle = (Math.PI * 2 * index) / SHARD_COUNT;
-  const radius = 28 + (index % 6) * 8;
+const shards: SplashShardModel[] = Array.from({ length: PARTICLE_COUNT }, (_, index) => {
+  const angle = (Math.PI * 2 * index) / PARTICLE_COUNT;
+  const radius = 82 + (index % 5) * 10;
+  const col = index % PARTICLE_GRID;
+  const row = Math.floor(index / PARTICLE_GRID);
+  const step = ICON_SIZE / (PARTICLE_GRID - 1);
+  const tx = -ICON_SIZE / 2 + col * step;
+  const ty = -ICON_SIZE / 2 + row * step;
+  const normalizedX = col / (PARTICLE_GRID - 1);
+  const normalizedY = row / (PARTICLE_GRID - 1);
+  const paletteIndex = Math.min(
+    ICON_PALETTE.length - 1,
+    Math.floor((normalizedX * 0.6 + normalizedY * 0.4) * ICON_PALETTE.length),
+  );
+  const centerDist = Math.hypot(normalizedX - 0.5, normalizedY - 0.5);
+  const color = centerDist < 0.2 ? '#F4F6FC' : ICON_PALETTE[paletteIndex];
 
   return {
     id: `shard-${index}`,
-    x: Math.cos(angle) * radius,
-    y: Math.sin(angle) * radius,
-    size: 6 + (index % 4) * 3,
-    rotate: -28 + (index % 11) * 9,
+    tx,
+    ty,
+    orbitX: Math.cos(angle) * radius,
+    orbitY: Math.sin(angle) * radius,
+    size: 5.6 + (index % 3),
+    rotate: -36 + (index % 9) * 9,
+    color,
   };
 });
 
 const SplashShard: React.FC<{
   shard: SplashShardModel;
   scatter: SharedValue<number>;
-  accentColor: string;
-}> = ({ shard, scatter, accentColor }) => {
+  opacity: SharedValue<number>;
+}> = ({ shard, scatter, opacity }) => {
   const shardStyle = useAnimatedStyle(() => ({
     transform: [
       {
         translateX:
-          shard.x * scatter.value + (1 - scatter.value) * (shard.x * 0.05),
+          shard.tx * (1 - scatter.value) +
+          shard.orbitX * scatter.value +
+          (-shard.ty * 0.15) * scatter.value,
       },
       {
         translateY:
-          shard.y * scatter.value + (1 - scatter.value) * (shard.y * 0.05),
+          shard.ty * (1 - scatter.value) +
+          shard.orbitY * scatter.value +
+          (shard.tx * 0.15) * scatter.value,
       },
       {
         rotate: `${shard.rotate * scatter.value}deg`,
       },
       {
-        scale: 0.78 + (1 - scatter.value) * 0.22,
+        scale: 0.72 + (1 - scatter.value) * 0.34,
       },
     ],
-    opacity: 0.5 + (1 - scatter.value) * 0.5,
+    opacity: (0.24 + (1 - scatter.value) * 0.76) * opacity.value,
   }));
 
   return (
@@ -80,7 +115,7 @@ const SplashShard: React.FC<{
           width: shard.size,
           height: shard.size * 1.7,
           borderRadius: shard.size / 2,
-          backgroundColor: accentColor,
+          backgroundColor: shard.color,
         },
         shardStyle,
       ]}
@@ -93,11 +128,16 @@ export const SplashScreen: React.FC<Props> = ({ navigation }) => {
   const { impact } = useHaptics();
   const reduceMotion = useReducedMotion();
 
-  const scatter = useSharedValue(0);
+  const scatter = useSharedValue(1);
+  const particleOpacity = useSharedValue(1);
+  const iconOpacity = useSharedValue(0);
   const logoOpacity = useSharedValue(0);
 
   useEffect(() => {
     if (reduceMotion) {
+      scatter.value = 0;
+      particleOpacity.value = 0;
+      iconOpacity.value = 1;
       logoOpacity.value = withTiming(1, {
         duration: 260,
         easing: Easing.out(Easing.cubic),
@@ -111,18 +151,18 @@ export const SplashScreen: React.FC<Props> = ({ navigation }) => {
     }
 
     scatter.value = withSequence(
-      withTiming(1, {
-        duration: 430,
-        easing: Easing.out(Easing.quad),
+      withTiming(1.02, {
+        duration: 200,
+        easing: Easing.out(Easing.cubic),
       }),
       withDelay(
-        120,
+        60,
         withSpring(
           0,
           {
-            damping: 12,
-            stiffness: 170,
-            mass: 0.8,
+            damping: 16,
+            stiffness: 185,
+            mass: 0.76,
           },
           finished => {
             if (finished) {
@@ -133,22 +173,50 @@ export const SplashScreen: React.FC<Props> = ({ navigation }) => {
       ),
     );
 
-    logoOpacity.value = withDelay(
-      260,
+    iconOpacity.value = withDelay(
+      420,
       withTiming(1, {
-        duration: 360,
+        duration: 320,
+        easing: Easing.out(Easing.cubic),
+      }),
+    );
+
+    particleOpacity.value = withDelay(
+      460,
+      withTiming(0, {
+        duration: 260,
+        easing: Easing.inOut(Easing.quad),
+      }),
+    );
+
+    logoOpacity.value = withDelay(
+      520,
+      withTiming(1, {
+        duration: 280,
       }),
     );
 
     const timer = setTimeout(() => {
       navigation.replace('Home');
-    }, 2200);
+    }, 1650);
 
     return () => clearTimeout(timer);
-  }, [impact, logoOpacity, navigation, reduceMotion, scatter]);
+  }, [
+    iconOpacity,
+    impact,
+    logoOpacity,
+    navigation,
+    particleOpacity,
+    reduceMotion,
+    scatter,
+  ]);
 
   const logoStyle = useAnimatedStyle(() => ({
     opacity: logoOpacity.value,
+  }));
+  const iconStyle = useAnimatedStyle(() => ({
+    opacity: iconOpacity.value,
+    transform: [{ scale: 0.96 + iconOpacity.value * 0.04 }],
   }));
 
   return (
@@ -160,9 +228,15 @@ export const SplashScreen: React.FC<Props> = ({ navigation }) => {
               key={shard.id}
               shard={shard}
               scatter={scatter}
-              accentColor={colors.accent}
+              opacity={particleOpacity}
             />
           ))}
+
+          <Animated.Image
+            source={require('../assets/appIcon.png')}
+            style={[styles.iconImage, iconStyle]}
+            resizeMode="contain"
+          />
 
           <Animated.View style={[styles.logoTextWrap, logoStyle]}>
             <AppText variant="title" style={styles.title}>
@@ -192,8 +266,16 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   logoTextWrap: {
+    position: 'absolute',
+    bottom: -74,
     alignItems: 'center',
     gap: 8,
+  },
+  iconImage: {
+    position: 'absolute',
+    width: ICON_SIZE,
+    height: ICON_SIZE,
+    borderRadius: ICON_SIZE * 0.22,
   },
   title: {
     letterSpacing: 0.4,
