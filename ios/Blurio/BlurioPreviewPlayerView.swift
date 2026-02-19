@@ -1,6 +1,7 @@
 import UIKit
 import AVFoundation
 import React
+import CoreImage
 
 final class BlurioPreviewPlayerView: UIView {
 
@@ -40,11 +41,17 @@ final class BlurioPreviewPlayerView: UIView {
   private var loadedUri: String = ""
   private var didReachEnd = false
   private var lastAppliedPlayheadMs: Double = -1
+  private var videoOutput: AVPlayerItemVideoOutput?
+  private var displayLink: CADisplayLink?
+  private let ciContext = CIContext()
+  private var latestFrameImage: CIImage?
 
   /// Container for blur overlay views, sits on top of the player layer
   private let blurContainer = UIView()
   /// Active blur region views keyed by track ID
   private var blurRegions: [String: BlurRegionView] = [:]
+  /// Track bounds in container space (before rotation transform), keyed by track ID
+  private var trackFrames: [String: CGRect] = [:]
 
   // MARK: - Init
 
@@ -69,6 +76,7 @@ final class BlurioPreviewPlayerView: UIView {
     CATransaction.setDisableActions(true)
     layoutBlurRegions()
     CATransaction.commit()
+    renderBlurRegionsIfPossible()
   }
 
   // MARK: - Render state
@@ -121,6 +129,7 @@ final class BlurioPreviewPlayerView: UIView {
     reconcileBlurRegions()
     layoutBlurRegions()
     CATransaction.commit()
+    renderBlurRegionsIfPossible()
   }
 
   private func shouldSkipStaleRenderState(nextPlayheadMs: Double) -> Bool {
@@ -167,7 +176,7 @@ final class BlurioPreviewPlayerView: UIView {
       return nil
     }
 
-    let blendMode = json["blendMode"] as? String ?? "normal"
+    let blendMode = json["blendMode"] as? String ?? "gaussian"
     let pathPoints = json["pathPoints"] as? [[String: CGFloat]] ?? []
 
     let values = ParsedValues(
@@ -208,6 +217,7 @@ final class BlurioPreviewPlayerView: UIView {
     for (id, view) in blurRegions where !visibleIds.contains(id) {
       view.removeFromSuperview()
       blurRegions.removeValue(forKey: id)
+      trackFrames.removeValue(forKey: id)
     }
 
     // Add/update regions
@@ -245,6 +255,7 @@ final class BlurioPreviewPlayerView: UIView {
       let x = min(max(track.values.x * containerSize.width, 0), max(0, containerSize.width - w))
       let y = min(max(track.values.y * containerSize.height, 0), max(0, containerSize.height - h))
       let rotation = track.values.rotation * .pi / 180
+      trackFrames[track.id] = CGRect(x: x, y: y, width: w, height: h)
 
       // Avoid frame jitter: assign geometry in identity transform space, then rotate.
       regionView.transform = .identity
@@ -264,8 +275,246 @@ final class BlurioPreviewPlayerView: UIView {
       view.removeFromSuperview()
     }
     blurRegions.removeAll()
+    trackFrames.removeAll()
     parsedTracks = []
     lastAppliedPlayheadMs = -1
+  }
+
+  private func renderBlurRegionsIfPossible() {
+    if let frameImage = latestFrameImage {
+      renderBlurRegions(with: frameImage)
+      return
+    }
+
+    guard let output = videoOutput else { return }
+    let targetTime = player?.currentTime() ?? .zero
+    var displayTime = CMTime.invalid
+    guard let pixelBuffer = output.copyPixelBuffer(forItemTime: targetTime, itemTimeForDisplay: &displayTime) else {
+      return
+    }
+
+    let frameImage = CIImage(cvPixelBuffer: pixelBuffer)
+    latestFrameImage = frameImage
+    renderBlurRegions(with: frameImage)
+  }
+
+  private func renderBlurRegions(with sourceImage: CIImage) {
+    guard !parsedTracks.isEmpty, !blurRegions.isEmpty else { return }
+
+    let sourceExtent = sourceImage.extent
+    guard sourceExtent.width > 1, sourceExtent.height > 1 else { return }
+
+    let candidateVideoRect = playerLayer?.videoRect ?? bounds
+    let videoRect = candidateVideoRect.isEmpty ? bounds : candidateVideoRect
+    guard videoRect.width > 1, videoRect.height > 1 else { return }
+
+    for track in parsedTracks {
+      guard track.visible,
+            track.values.strength > 0.001,
+            let regionView = blurRegions[track.id],
+            let trackFrame = trackFrames[track.id],
+            let cropRect = sourceCropRect(
+              for: trackFrame,
+              inVideoRect: videoRect,
+              sourceExtent: sourceExtent
+            ) else {
+        continue
+      }
+
+      let cropped = sourceImage.cropped(to: cropRect)
+      let filtered = applyBlurFilter(
+        to: cropped,
+        mode: normalizedBlurMode(track.blendMode),
+        strength: track.values.strength
+      ).cropped(to: cropped.extent)
+
+      guard let cgImage = ciContext.createCGImage(filtered, from: filtered.extent) else {
+        continue
+      }
+
+      regionView.setFilteredImage(cgImage)
+    }
+  }
+
+  private func normalizedBlurMode(_ value: String) -> String {
+    switch value {
+    case "normal":
+      return "gaussian"
+    case "frosted":
+      return "smartBlur"
+    default:
+      return value
+    }
+  }
+
+  private func sourceCropRect(
+    for trackFrame: CGRect,
+    inVideoRect videoRect: CGRect,
+    sourceExtent: CGRect
+  ) -> CGRect? {
+    let intersection = trackFrame.intersection(videoRect)
+    guard !intersection.isNull, intersection.width > 1, intersection.height > 1 else {
+      return nil
+    }
+
+    let u0 = (intersection.minX - videoRect.minX) / videoRect.width
+    let u1 = (intersection.maxX - videoRect.minX) / videoRect.width
+    let vTop = (intersection.minY - videoRect.minY) / videoRect.height
+    let vBottom = (intersection.maxY - videoRect.minY) / videoRect.height
+
+    let x = sourceExtent.minX + u0 * sourceExtent.width
+    let y = sourceExtent.minY + (1.0 - vBottom) * sourceExtent.height
+    let width = max((u1 - u0) * sourceExtent.width, 1)
+    let height = max((vBottom - vTop) * sourceExtent.height, 1)
+
+    let rect = CGRect(x: x, y: y, width: width, height: height).intersection(sourceExtent)
+    guard !rect.isNull, rect.width > 1, rect.height > 1 else { return nil }
+    return rect
+  }
+
+  private func applyBlurFilter(
+    to image: CIImage,
+    mode: String,
+    strength: CGFloat
+  ) -> CIImage {
+    let clampedStrength = min(max(strength, 0), 1)
+    let baseRadius = max(clampedStrength * 16.0, 0.35)
+
+    switch mode {
+    case "bokeh":
+      let discRadius = max(baseRadius * 2.0, 1.6)
+      let disc = applyDiscBlur(to: image, radius: discRadius)
+      if let bloom = CIFilter(name: "CIBloom") {
+        setFilterValue(bloom, disc, forKey: kCIInputImageKey)
+        setFilterValue(bloom, discRadius * 0.9, forKey: kCIInputRadiusKey)
+        setFilterValue(bloom, 0.15 + clampedStrength * 0.35, forKey: kCIInputIntensityKey)
+        if let output = bloom.outputImage {
+          return output
+        }
+      }
+      return disc
+
+    case "motionBlur":
+      if let motion = CIFilter(name: "CIMotionBlur") {
+        setFilterValue(motion, image, forKey: kCIInputImageKey)
+        setFilterValue(motion, max(baseRadius * 2.4, 1.4), forKey: kCIInputRadiusKey)
+        setFilterValue(motion, CGFloat.pi * 0.34, forKey: kCIInputAngleKey)
+        if let output = motion.outputImage {
+          return output
+        }
+      }
+      return applyGaussianBlur(to: image, radius: max(baseRadius * 1.9, 1.2))
+
+    case "bilateral":
+      if let noiseReduction = CIFilter(name: "CINoiseReduction") {
+        setFilterValue(noiseReduction, image, forKey: kCIInputImageKey)
+        setFilterValue(noiseReduction, 0.01 + clampedStrength * 0.06, forKey: "inputNoiseLevel")
+        setFilterValue(noiseReduction, 0.55, forKey: "inputSharpness")
+        if let output = noiseReduction.outputImage {
+          return output
+        }
+      }
+      return applyGaussianBlur(to: image, radius: max(baseRadius * 0.45, 0.5))
+
+    case "smartBlur":
+      let softened = applyGaussianBlur(to: image, radius: max(baseRadius * 0.9, 0.7))
+      if let reduction = CIFilter(name: "CINoiseReduction") {
+        setFilterValue(reduction, softened, forKey: kCIInputImageKey)
+        setFilterValue(reduction, 0.02 + clampedStrength * 0.07, forKey: "inputNoiseLevel")
+        setFilterValue(reduction, 0.35, forKey: "inputSharpness")
+        if let denoised = reduction.outputImage {
+          if let sharpen = CIFilter(name: "CISharpenLuminance") {
+            setFilterValue(sharpen, denoised, forKey: kCIInputImageKey)
+            setFilterValue(sharpen, 0.18 + clampedStrength * 0.35, forKey: kCIInputSharpnessKey)
+            if let output = sharpen.outputImage {
+              return output
+            }
+          }
+          return denoised
+        }
+      }
+      return softened
+
+    case "radial":
+      if let zoom = CIFilter(name: "CIZoomBlur") {
+        setFilterValue(zoom, image, forKey: kCIInputImageKey)
+        let center = CIVector(x: image.extent.midX, y: image.extent.midY)
+        setFilterValue(zoom, center, forKey: kCIInputCenterKey)
+        setFilterValue(zoom, max(baseRadius * 2.2, 1.2), forKey: kCIInputAmountKey)
+        if let output = zoom.outputImage {
+          return output
+        }
+      }
+      return applyGaussianBlur(to: image, radius: max(baseRadius * 1.25, 0.9))
+
+    case "gaussian":
+      fallthrough
+    default:
+      return applyGaussianBlur(to: image, radius: baseRadius)
+    }
+  }
+
+  private func applyGaussianBlur(to image: CIImage, radius: CGFloat) -> CIImage {
+    guard let gaussian = CIFilter(name: "CIGaussianBlur") else { return image }
+    setFilterValue(gaussian, image, forKey: kCIInputImageKey)
+    setFilterValue(gaussian, radius, forKey: kCIInputRadiusKey)
+    return gaussian.outputImage ?? image
+  }
+
+  private func applyDiscBlur(to image: CIImage, radius: CGFloat) -> CIImage {
+    if let disc = CIFilter(name: "CIDiscBlur") {
+      setFilterValue(disc, image, forKey: kCIInputImageKey)
+      setFilterValue(disc, radius, forKey: kCIInputRadiusKey)
+      if let output = disc.outputImage {
+        return output
+      }
+    }
+    if let bokeh = CIFilter(name: "CIBokehBlur") {
+      setFilterValue(bokeh, image, forKey: kCIInputImageKey)
+      setFilterValue(bokeh, radius, forKey: kCIInputRadiusKey)
+      if let output = bokeh.outputImage {
+        return output
+      }
+    }
+    return applyGaussianBlur(to: image, radius: radius)
+  }
+
+  private func setFilterValue(_ filter: CIFilter, _ value: Any, forKey key: String) {
+    guard filter.inputKeys.contains(key) else { return }
+    filter.setValue(value, forKey: key)
+  }
+
+  @objc private func displayLinkTick() {
+    guard !blurRegions.isEmpty, let output = videoOutput else { return }
+
+    let hostTime = CACurrentMediaTime()
+    let outputTime = output.itemTime(forHostTime: hostTime)
+    var displayTime = CMTime.invalid
+
+    if output.hasNewPixelBuffer(forItemTime: outputTime),
+       let pixelBuffer = output.copyPixelBuffer(forItemTime: outputTime, itemTimeForDisplay: &displayTime) {
+      let frameImage = CIImage(cvPixelBuffer: pixelBuffer)
+      latestFrameImage = frameImage
+      renderBlurRegions(with: frameImage)
+      return
+    }
+
+    if paused {
+      renderBlurRegionsIfPossible()
+    }
+  }
+
+  private func startDisplayLink() {
+    stopDisplayLink()
+    let link = CADisplayLink(target: self, selector: #selector(displayLinkTick))
+    link.preferredFramesPerSecond = 30
+    link.add(to: .main, forMode: .common)
+    displayLink = link
+  }
+
+  private func stopDisplayLink() {
+    displayLink?.invalidate()
+    displayLink = nil
   }
 
   // MARK: - Video loading
@@ -274,6 +523,7 @@ final class BlurioPreviewPlayerView: UIView {
     cleanupPlayer()
     loadedUri = sourceUri
     lastAppliedPlayheadMs = -1
+    latestFrameImage = nil
     backgroundColor = .clear
 
     guard !sourceUri.isEmpty else { return }
@@ -284,6 +534,12 @@ final class BlurioPreviewPlayerView: UIView {
     }
 
     let item = AVPlayerItem(url: url)
+    let output = AVPlayerItemVideoOutput(pixelBufferAttributes: [
+      kCVPixelBufferPixelFormatTypeKey as String: Int(kCVPixelFormatType_32BGRA)
+    ])
+    item.add(output)
+    videoOutput = output
+
     let newPlayer = AVPlayer(playerItem: item)
     newPlayer.isMuted = true
 
@@ -322,6 +578,7 @@ final class BlurioPreviewPlayerView: UIView {
     )
 
     applyQuality()
+    startDisplayLink()
 
     if !paused {
       newPlayer.play()
@@ -375,10 +632,13 @@ final class BlurioPreviewPlayerView: UIView {
     statusObservation?.invalidate()
     statusObservation = nil
     NotificationCenter.default.removeObserver(self, name: .AVPlayerItemDidPlayToEndTime, object: player?.currentItem)
+    stopDisplayLink()
     playerLayer?.removeFromSuperlayer()
     player?.pause()
     player = nil
     playerLayer = nil
+    videoOutput = nil
+    latestFrameImage = nil
     loadedUri = ""
   }
 
@@ -389,22 +649,21 @@ final class BlurioPreviewPlayerView: UIView {
 
 // MARK: - BlurRegionView
 
-/// A single blur region overlay. Uses UIVisualEffectView with a property animator
-/// to control blur intensity via the track's `strength` value.
+/// A single blur region overlay.
+/// The parent view positions/masks this view while this view only renders filtered frame content.
 private final class BlurRegionView: UIView {
 
-  private let effectView: UIVisualEffectView
-  private var animator: UIViewPropertyAnimator?
-  private var currentStrength: CGFloat = -1
+  private let imageView = UIImageView()
   private var maskLayer: CAShapeLayer?
 
   override init(frame: CGRect) {
-    effectView = UIVisualEffectView(effect: nil)
     super.init(frame: frame)
     clipsToBounds = true
     isUserInteractionEnabled = false
-    effectView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
-    addSubview(effectView)
+    imageView.contentMode = .scaleToFill
+    imageView.isUserInteractionEnabled = false
+    imageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+    addSubview(imageView)
   }
 
   required init?(coder: NSCoder) {
@@ -420,34 +679,17 @@ private final class BlurRegionView: UIView {
     blendMode: String
   ) {
     alpha = opacity
+    // Inputs are consumed in parent-level rendering; keep signature for compatibility.
+    _ = type
+    _ = strength
+    _ = feather
+    _ = cornerRadius
+    _ = blendMode
+  }
 
-    let clamped = min(max(strength, 0), 1)
-    guard abs(clamped - currentStrength) > 0.005 else { return }
-    currentStrength = clamped
-
-    // Tear down previous animator
-    animator?.stopAnimation(true)
-    animator?.finishAnimation(at: .current)
-    animator = nil
-
-    effectView.effect = nil
-
-    if clamped > 0.001 {
-      let blurStyle: UIBlurEffect.Style
-      switch blendMode {
-      case "bokeh", "smartBlur", "radial", "frosted":
-        blurStyle = .light
-      default:
-        blurStyle = .regular
-      }
-      let blur = UIBlurEffect(style: blurStyle)
-      let anim = UIViewPropertyAnimator(duration: 1, curve: .linear) { [weak self] in
-        self?.effectView.effect = blur
-      }
-      anim.fractionComplete = clamped
-      anim.pausesOnCompletion = true
-      animator = anim
-    }
+  func setFilteredImage(_ image: CGImage) {
+    imageView.layer.contents = image
+    imageView.layer.contentsGravity = .resizeAspectFill
   }
 
   func applyMask(type: String, cornerRadius: CGFloat, feather: CGFloat) {
@@ -496,11 +738,6 @@ private final class BlurRegionView: UIView {
 
   override func layoutSubviews() {
     super.layoutSubviews()
-    effectView.frame = bounds
-  }
-
-  deinit {
-    animator?.stopAnimation(true)
-    animator?.finishAnimation(at: .current)
+    imageView.frame = bounds
   }
 }
