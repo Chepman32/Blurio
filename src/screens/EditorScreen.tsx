@@ -682,6 +682,8 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
               accessibilityLabel={STRINGS.params.strength}
             />
           </View>
+        ) : activePanel === 'params' ? (
+          <View style={styles.strengthCard} />
         ) : null}
 
         {!addRegionModalVisible ? (
