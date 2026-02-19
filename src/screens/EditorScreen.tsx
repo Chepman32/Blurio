@@ -45,7 +45,7 @@ import { checkAssetAvailability } from '../utils';
 type Props = NativeStackScreenProps<RootStackParamList, 'Editor'>;
 
 const REGIONS_COLLAPSED_HEIGHT = 92;
-const PARAMS_EXPANDED_HEIGHT = 460;
+const PARAMS_EXPANDED_HEIGHT = 340;
 
 export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
   const { colors } = useAppTheme();
