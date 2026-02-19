@@ -1,13 +1,6 @@
 import React from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
-import {
-  Eye,
-  KeyRound,
-  Layers,
-  Redo2,
-  SlidersHorizontal,
-  Undo2,
-} from 'lucide-react-native';
+import { Layers, SlidersHorizontal } from 'lucide-react-native';
 import type { LucideIcon } from 'lucide-react-native';
 import { SPACING, STRINGS } from '../../constants';
 import type { EditorPanel } from '../../types';
@@ -17,8 +10,6 @@ import { IconActionButton } from '../common/IconActionButton';
 interface ToolDockProps {
   activePanel: EditorPanel;
   onSelectPanel: (panel: EditorPanel) => void;
-  onUndo: () => void;
-  onRedo: () => void;
 }
 
 const PANEL_ITEMS: Array<{
@@ -28,15 +19,11 @@ const PANEL_ITEMS: Array<{
 }> = [
   { panel: 'regions', label: STRINGS.editor.regions, icon: Layers },
   { panel: 'params', label: STRINGS.editor.params, icon: SlidersHorizontal },
-  { panel: 'keyframes', label: STRINGS.editor.keyframes, icon: KeyRound },
-  { panel: 'view', label: STRINGS.editor.view, icon: Eye },
 ];
 
 export const ToolDock: React.FC<ToolDockProps> = ({
   activePanel,
   onSelectPanel,
-  onUndo,
-  onRedo,
 }) => {
   const { colors } = useAppTheme();
 
@@ -56,18 +43,6 @@ export const ToolDock: React.FC<ToolDockProps> = ({
             accessibilityLabel={`Open ${item.label} panel`}
           />
         ))}
-        <IconActionButton
-          icon={Undo2}
-          label={STRINGS.editor.undo}
-          onPress={onUndo}
-          accessibilityLabel={STRINGS.editor.undo}
-        />
-        <IconActionButton
-          icon={Redo2}
-          label={STRINGS.editor.redo}
-          onPress={onRedo}
-          accessibilityLabel={STRINGS.editor.redo}
-        />
       </ScrollView>
     </View>
   );
