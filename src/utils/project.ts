@@ -73,7 +73,7 @@ export const createProject = (
   video: VideoMeta,
   accentColor: string,
   providedName?: string,
-  folderId = 'folder-default',
+  folderId = 'folder-unassigned',
 ): Project => {
   const id = createId('project');
   const timestamp = Date.now();

@@ -71,6 +71,7 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
   const moveProjectToFolder = useEditorStore(state => state.moveProjectToFolder);
   const renameFolder = useEditorStore(state => state.renameFolder);
   const removeFolder = useEditorStore(state => state.removeFolder);
+  const cleanTrash = useEditorStore(state => state.cleanTrash);
   const selectProject = useEditorStore(state => state.selectProject);
 
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
@@ -251,6 +252,25 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     }
   };
 
+  const onTrashAction = (actionId: string) => {
+    if (actionId !== 'clean-trash') {
+      return;
+    }
+
+    Alert.alert(
+      STRINGS.settings.cleanTrashTitle,
+      STRINGS.settings.cleanTrashBody,
+      [
+        { text: STRINGS.common.cancel, style: 'cancel' },
+        {
+          text: STRINGS.settings.cleanTrash,
+          style: 'destructive',
+          onPress: () => cleanTrash(),
+        },
+      ],
+    );
+  };
+
   const buildProjectMenuItems = (project: Project): NativeContextMenuAction[] => {
     if (project.trashedAt !== null) {
       return [
@@ -342,6 +362,14 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
     { id: 'remove-folder', title: STRINGS.home.removeAction, destructive: true },
   ];
 
+  const trashMenuItems: NativeContextMenuAction[] = [
+    {
+      id: 'clean-trash',
+      title: STRINGS.settings.cleanTrash,
+      destructive: true,
+    },
+  ];
+
   const toggleSection = (key: string) => {
     setExpandedSections(previous => ({
       ...previous,
@@ -404,6 +432,16 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
         <BlurioContextMenuView
           menuItems={folderMenuItems}
           onPressMenuItem={actionId => onFolderAction(section.folderId as ID, actionId)}>
+          {header}
+        </BlurioContextMenuView>
+      );
+    }
+
+    if (section.type === 'trash') {
+      return (
+        <BlurioContextMenuView
+          menuItems={trashMenuItems}
+          onPressMenuItem={onTrashAction}>
           {header}
         </BlurioContextMenuView>
       );

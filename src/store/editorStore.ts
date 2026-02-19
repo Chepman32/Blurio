@@ -176,18 +176,7 @@ const persistSettings = (settings: StoredSettings): void => {
   saveSettings(settings);
 };
 
-const DEFAULT_FOLDER_ID = 'folder-default';
-const DEFAULT_FOLDER_NAME = 'Projects';
-
-const createDefaultFolder = (): ProjectFolder => {
-  const timestamp = Date.now();
-  return {
-    id: DEFAULT_FOLDER_ID,
-    name: DEFAULT_FOLDER_NAME,
-    createdAt: timestamp,
-    updatedAt: timestamp,
-  };
-};
+const UNASSIGNED_FOLDER_ID = 'folder-unassigned';
 
 const normalizeFolderName = (value: string, fallback = 'Untitled Folder'): string => {
   const next = value.trim();
@@ -199,22 +188,9 @@ const normalizeProjectName = (value: string, fallback = 'Untitled Project'): str
   return next.length > 0 ? next : fallback;
 };
 
-const ensureFolders = (
-  input: Record<ID, ProjectFolder>,
-): Record<ID, ProjectFolder> => {
-  if (Object.keys(input).length > 0) {
-    return input;
-  }
-
-  const fallback = createDefaultFolder();
-  return {
-    [fallback.id]: fallback,
-  };
-};
-
 const getFallbackFolderId = (folders: Record<ID, ProjectFolder>): ID => {
   const [firstFolderId] = Object.keys(folders);
-  return firstFolderId ?? DEFAULT_FOLDER_ID;
+  return firstFolderId ?? UNASSIGNED_FOLDER_ID;
 };
 
 const sanitizeProjects = (
@@ -563,9 +539,7 @@ const buildTrackValuesFromTemplate = (
 
 export const useEditorStore = create<BlurioStore>((set, get) => ({
   projects: {},
-  folders: {
-    [DEFAULT_FOLDER_ID]: createDefaultFolder(),
-  },
+  folders: {},
   settings: { ...DEFAULT_SETTINGS },
   ui: emptyUIState(DEFAULT_SETTINGS),
   undoStack: [],
@@ -575,14 +549,11 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
 
   initializeFromDisk: () => {
     const rawFolders = loadFolders();
-    const folders = ensureFolders(rawFolders);
+    const folders = rawFolders;
     const loadedProjects = loadProjects();
     const normalizedProjects = sanitizeProjects(loadedProjects, folders);
     const projects = normalizedProjects.projects;
     const settings = loadSettings();
-    if (Object.keys(rawFolders).length === 0) {
-      persistFolders(folders);
-    }
     if (normalizedProjects.changed) {
       persistProjects(projects);
     }
@@ -917,8 +888,7 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
     const nextFolders = { ...state.folders };
     delete nextFolders[folderId];
 
-    const normalizedFolders = ensureFolders(nextFolders);
-    const fallbackFolderId = getFallbackFolderId(normalizedFolders);
+    const fallbackFolderId = getFallbackFolderId(nextFolders);
     const nextProjects: Record<ID, Project> = {};
     Object.entries(state.projects).forEach(([projectId, project]) => {
       nextProjects[projectId] =
@@ -931,11 +901,11 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
           : project;
     });
 
-    persistFolders(normalizedFolders);
+    persistFolders(nextFolders);
     persistProjects(nextProjects);
 
     set({
-      folders: normalizedFolders,
+      folders: nextFolders,
       projects: nextProjects,
     });
   },
