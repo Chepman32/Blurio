@@ -61,6 +61,7 @@ export const renderStateDigest = (renderState: RenderState): string =>
       id: track.id,
       visible: track.visible,
       locked: track.locked,
+      blendMode: track.blendMode,
       values: track.values,
     })),
   });

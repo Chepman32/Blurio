@@ -326,7 +326,7 @@ final class BlurioPreviewPlayerView: UIView {
         to: cropped,
         mode: normalizedBlurMode(track.blendMode),
         strength: track.values.strength
-      ).cropped(to: cropped.extent)
+      )
 
       guard let cgImage = ciContext.createCGImage(filtered, from: filtered.extent) else {
         continue
@@ -379,104 +379,112 @@ final class BlurioPreviewPlayerView: UIView {
   ) -> CIImage {
     let clampedStrength = min(max(strength, 0), 1)
     let baseRadius = max(clampedStrength * 16.0, 0.35)
+    let extent = image.extent
 
     switch mode {
     case "bokeh":
-      let discRadius = max(baseRadius * 2.0, 1.6)
-      let disc = applyDiscBlur(to: image, radius: discRadius)
-      if let bloom = CIFilter(name: "CIBloom") {
-        setFilterValue(bloom, disc, forKey: kCIInputImageKey)
-        setFilterValue(bloom, discRadius * 0.9, forKey: kCIInputRadiusKey)
-        setFilterValue(bloom, 0.15 + clampedStrength * 0.35, forKey: kCIInputIntensityKey)
-        if let output = bloom.outputImage {
-          return output
+      let bokehRadius = max(baseRadius * 2.5, 2.0)
+      let clamped = image.clampedToExtent()
+      if let bokeh = CIFilter(name: "CIBokehBlur") {
+        setFilterValue(bokeh, clamped, forKey: kCIInputImageKey)
+        setFilterValue(bokeh, bokehRadius, forKey: kCIInputRadiusKey)
+        setFilterValue(bokeh, 0.5 + clampedStrength * 0.5, forKey: "inputRingAmount")
+        setFilterValue(bokeh, max(bokehRadius * 0.15, 0.3), forKey: "inputRingSize")
+        setFilterValue(bokeh, 0.6 + clampedStrength * 0.4, forKey: "inputSoftness")
+        if let bokehOutput = bokeh.outputImage {
+          if let bloom = CIFilter(name: "CIBloom") {
+            setFilterValue(bloom, bokehOutput, forKey: kCIInputImageKey)
+            setFilterValue(bloom, bokehRadius * 1.2, forKey: kCIInputRadiusKey)
+            setFilterValue(bloom, 0.25 + clampedStrength * 0.5, forKey: kCIInputIntensityKey)
+            if let output = bloom.outputImage {
+              return output.cropped(to: extent)
+            }
+          }
+          return bokehOutput.cropped(to: extent)
         }
       }
-      return disc
+      // Fallback: gaussian + bloom for bokeh-like glow
+      let fallbackBlur = applyGaussianBlur(to: image, radius: bokehRadius)
+      if let bloom = CIFilter(name: "CIBloom") {
+        setFilterValue(bloom, fallbackBlur, forKey: kCIInputImageKey)
+        setFilterValue(bloom, bokehRadius * 1.2, forKey: kCIInputRadiusKey)
+        setFilterValue(bloom, 0.3 + clampedStrength * 0.5, forKey: kCIInputIntensityKey)
+        if let output = bloom.outputImage {
+          return output.cropped(to: extent)
+        }
+      }
+      return fallbackBlur.cropped(to: extent)
 
     case "motionBlur":
+      let clamped = image.clampedToExtent()
       if let motion = CIFilter(name: "CIMotionBlur") {
-        setFilterValue(motion, image, forKey: kCIInputImageKey)
-        setFilterValue(motion, max(baseRadius * 2.4, 1.4), forKey: kCIInputRadiusKey)
+        setFilterValue(motion, clamped, forKey: kCIInputImageKey)
+        setFilterValue(motion, max(baseRadius * 3.5, 2.0), forKey: kCIInputRadiusKey)
         setFilterValue(motion, CGFloat.pi * 0.34, forKey: kCIInputAngleKey)
         if let output = motion.outputImage {
-          return output
+          return output.cropped(to: extent)
         }
       }
-      return applyGaussianBlur(to: image, radius: max(baseRadius * 1.9, 1.2))
+      return applyGaussianBlur(to: image, radius: max(baseRadius * 1.9, 1.2)).cropped(to: extent)
 
     case "bilateral":
+      // Edge-preserving blur: light gaussian + strong noise reduction
+      let preBlur = applyGaussianBlur(to: image, radius: max(baseRadius * 0.35, 0.5))
       if let noiseReduction = CIFilter(name: "CINoiseReduction") {
-        setFilterValue(noiseReduction, image, forKey: kCIInputImageKey)
-        setFilterValue(noiseReduction, 0.01 + clampedStrength * 0.06, forKey: "inputNoiseLevel")
-        setFilterValue(noiseReduction, 0.55, forKey: "inputSharpness")
+        setFilterValue(noiseReduction, preBlur, forKey: kCIInputImageKey)
+        setFilterValue(noiseReduction, 0.02 + clampedStrength * 0.12, forKey: "inputNoiseLevel")
+        setFilterValue(noiseReduction, 0.3 + clampedStrength * 0.3, forKey: "inputSharpness")
         if let output = noiseReduction.outputImage {
-          return output
+          return output.cropped(to: extent)
         }
       }
-      return applyGaussianBlur(to: image, radius: max(baseRadius * 0.45, 0.5))
+      return preBlur.cropped(to: extent)
 
     case "smartBlur":
-      let softened = applyGaussianBlur(to: image, radius: max(baseRadius * 0.9, 0.7))
+      let softened = applyGaussianBlur(to: image, radius: max(baseRadius * 1.1, 1.0))
       if let reduction = CIFilter(name: "CINoiseReduction") {
         setFilterValue(reduction, softened, forKey: kCIInputImageKey)
-        setFilterValue(reduction, 0.02 + clampedStrength * 0.07, forKey: "inputNoiseLevel")
-        setFilterValue(reduction, 0.35, forKey: "inputSharpness")
+        setFilterValue(reduction, 0.03 + clampedStrength * 0.1, forKey: "inputNoiseLevel")
+        setFilterValue(reduction, 0.2 + clampedStrength * 0.2, forKey: "inputSharpness")
         if let denoised = reduction.outputImage {
           if let sharpen = CIFilter(name: "CISharpenLuminance") {
             setFilterValue(sharpen, denoised, forKey: kCIInputImageKey)
-            setFilterValue(sharpen, 0.18 + clampedStrength * 0.35, forKey: kCIInputSharpnessKey)
+            setFilterValue(sharpen, 0.3 + clampedStrength * 0.6, forKey: kCIInputSharpnessKey)
             if let output = sharpen.outputImage {
-              return output
+              return output.cropped(to: extent)
             }
           }
-          return denoised
+          return denoised.cropped(to: extent)
         }
       }
-      return softened
+      return softened.cropped(to: extent)
 
     case "radial":
+      let clamped = image.clampedToExtent()
       if let zoom = CIFilter(name: "CIZoomBlur") {
-        setFilterValue(zoom, image, forKey: kCIInputImageKey)
-        let center = CIVector(x: image.extent.midX, y: image.extent.midY)
+        setFilterValue(zoom, clamped, forKey: kCIInputImageKey)
+        let center = CIVector(x: extent.midX, y: extent.midY)
         setFilterValue(zoom, center, forKey: kCIInputCenterKey)
-        setFilterValue(zoom, max(baseRadius * 2.2, 1.2), forKey: kCIInputAmountKey)
+        setFilterValue(zoom, max(baseRadius * 3.5, 2.0), forKey: kCIInputAmountKey)
         if let output = zoom.outputImage {
-          return output
+          return output.cropped(to: extent)
         }
       }
-      return applyGaussianBlur(to: image, radius: max(baseRadius * 1.25, 0.9))
+      return applyGaussianBlur(to: image, radius: max(baseRadius * 1.25, 0.9)).cropped(to: extent)
 
     case "gaussian":
       fallthrough
     default:
-      return applyGaussianBlur(to: image, radius: baseRadius)
+      return applyGaussianBlur(to: image, radius: baseRadius).cropped(to: extent)
     }
   }
 
   private func applyGaussianBlur(to image: CIImage, radius: CGFloat) -> CIImage {
+    let clamped = image.clampedToExtent()
     guard let gaussian = CIFilter(name: "CIGaussianBlur") else { return image }
-    setFilterValue(gaussian, image, forKey: kCIInputImageKey)
+    setFilterValue(gaussian, clamped, forKey: kCIInputImageKey)
     setFilterValue(gaussian, radius, forKey: kCIInputRadiusKey)
     return gaussian.outputImage ?? image
-  }
-
-  private func applyDiscBlur(to image: CIImage, radius: CGFloat) -> CIImage {
-    if let disc = CIFilter(name: "CIDiscBlur") {
-      setFilterValue(disc, image, forKey: kCIInputImageKey)
-      setFilterValue(disc, radius, forKey: kCIInputRadiusKey)
-      if let output = disc.outputImage {
-        return output
-      }
-    }
-    if let bokeh = CIFilter(name: "CIBokehBlur") {
-      setFilterValue(bokeh, image, forKey: kCIInputImageKey)
-      setFilterValue(bokeh, radius, forKey: kCIInputRadiusKey)
-      if let output = bokeh.outputImage {
-        return output
-      }
-    }
-    return applyGaussianBlur(to: image, radius: radius)
   }
 
   private func setFilterValue(_ filter: CIFilter, _ value: Any, forKey key: String) {
