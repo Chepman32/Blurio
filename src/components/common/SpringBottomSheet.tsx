@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo } from 'react';
-import { Dimensions, StyleSheet, View } from 'react-native';
+import { Dimensions, Pressable, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
   runOnJS,
@@ -108,39 +108,54 @@ export const SpringBottomSheet: React.FC<SpringBottomSheetProps> = ({
   const solidSheetColor = isDark ? '#101219' : '#FFFFFF';
 
   return (
-    <GestureDetector gesture={pan}>
-      <Animated.View
-        accessibilityLabel={title}
-        style={[
-          styles.sheet,
-          animatedStyle,
-          {
-            height: maxHeight,
-            backgroundColor: solidSheetColor,
-            borderColor: colors.cardBorder,
-          },
-        ]}>
-        <View style={styles.handleRow}>
-          <View style={[styles.handle, { backgroundColor: colors.textMuted }]} />
-          <View style={styles.titleRow}>
-            <View style={styles.sideSpacer} />
-            <AppText variant="section" color={colors.textSecondary}>
-              {title}
-            </AppText>
-            <View style={styles.rightSlot}>{headerRight}</View>
+    <>
+      {expanded ? (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel={`Collapse ${title}`}
+          onPress={() => onExpandedChange(false)}
+          style={styles.backdrop}
+        />
+      ) : null}
+      <GestureDetector gesture={pan}>
+        <Animated.View
+          accessibilityLabel={title}
+          style={[
+            styles.sheet,
+            animatedStyle,
+            {
+              height: maxHeight,
+              backgroundColor: solidSheetColor,
+              borderColor: colors.cardBorder,
+            },
+          ]}>
+          <View style={styles.handleRow}>
+            <View style={[styles.handle, { backgroundColor: colors.textMuted }]} />
+            <View style={styles.titleRow}>
+              <View style={styles.sideSpacer} />
+              <AppText variant="section" color={colors.textSecondary}>
+                {title}
+              </AppText>
+              <View style={styles.rightSlot}>{headerRight}</View>
+            </View>
           </View>
-        </View>
-        <View style={styles.content}>{children}</View>
-      </Animated.View>
-    </GestureDetector>
+          <View style={styles.content}>{children}</View>
+        </Animated.View>
+      </GestureDetector>
+    </>
   );
 };
 
 const styles = StyleSheet.create({
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    zIndex: 19,
+  },
   sheet: {
     position: 'absolute',
     left: 0,
     right: 0,
+    zIndex: 20,
     borderTopLeftRadius: RADIUS.sheet,
     borderTopRightRadius: RADIUS.sheet,
     borderWidth: 1,
@@ -160,12 +175,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   sideSpacer: {
-    width: 28,
-    height: 28,
+    width: 40,
+    height: 40,
   },
   rightSlot: {
-    width: 28,
-    height: 28,
+    width: 40,
+    height: 40,
     alignItems: 'center',
     justifyContent: 'center',
   },

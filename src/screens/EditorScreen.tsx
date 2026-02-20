@@ -201,14 +201,15 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
   const activePanel = ui.activePanel === 'params' ? 'params' : 'regions';
   const handleSelectPanel = useCallback(
     (panel: EditorPanel) => {
-      setActivePanel(panel);
       setSheetExpanded(true);
+      setActivePanel(panel);
     },
     [setActivePanel, setSheetExpanded],
   );
   const collapsedSheetHeight = REGIONS_COLLAPSED_HEIGHT;
   const expandedSheetHeight =
     activePanel === 'params' ? PARAMS_EXPANDED_HEIGHT : MAX_SHEET_HEIGHT;
+  const collapsedSheetSpacerHeight = collapsedSheetHeight + SPACING.xs;
 
   if (!project || !renderState) {
     return (
@@ -388,6 +389,13 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
               accessibilityLabel={STRINGS.params.strength}
             />
           </View>
+        ) : activePanel === 'regions' ? (
+          <View
+            style={[
+              styles.strengthSpacer,
+              { minHeight: collapsedSheetSpacerHeight },
+            ]}
+          />
         ) : (
           <View style={styles.strengthSpacer} />
         )}
@@ -412,7 +420,7 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
                   styles.sheetHeaderAction,
                   { borderColor: colors.cardBorder, backgroundColor: colors.card },
                 ]}>
-                <Plus size={14} color={colors.textPrimary} />
+                <Plus size={18} color={colors.textPrimary} />
               </TouchableOpacity>
             ) : null
           }>
@@ -503,9 +511,9 @@ const styles = StyleSheet.create({
     gap: SPACING.xs,
   },
   sheetHeaderAction: {
-    width: 28,
-    height: 28,
-    borderRadius: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
