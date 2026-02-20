@@ -34,7 +34,7 @@ export const SpringBottomSheet: React.FC<SpringBottomSheetProps> = ({
   headerRight,
   children,
 }) => {
-  const { colors } = useAppTheme();
+  const { colors, isDark } = useAppTheme();
   const snapHeights = useMemo(
     () => [collapsedHeight, midHeight, expandedHeight],
     [collapsedHeight, midHeight, expandedHeight],
@@ -105,6 +105,8 @@ export const SpringBottomSheet: React.FC<SpringBottomSheetProps> = ({
     transform: [{ translateY: translateY.value }],
   }));
 
+  const solidSheetColor = isDark ? '#101219' : '#FFFFFF';
+
   return (
     <GestureDetector gesture={pan}>
       <Animated.View
@@ -114,7 +116,7 @@ export const SpringBottomSheet: React.FC<SpringBottomSheetProps> = ({
           animatedStyle,
           {
             height: maxHeight,
-            backgroundColor: colors.sheet,
+            backgroundColor: solidSheetColor,
             borderColor: colors.cardBorder,
           },
         ]}>

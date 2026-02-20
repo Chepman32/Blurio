@@ -428,17 +428,18 @@ final class BlurioPreviewPlayerView: UIView {
       return applyGaussianBlur(to: image, radius: max(baseRadius * 1.9, 1.2)).cropped(to: extent)
 
     case "bilateral":
-      // Edge-preserving blur: light gaussian + strong noise reduction
-      let preBlur = applyGaussianBlur(to: image, radius: max(baseRadius * 0.35, 0.5))
+      // Edge-preserving blur: gaussian blur + noise reduction to recover edges
+      let bilateralRadius = max(baseRadius * 0.8, 1.0)
+      let blurred = applyGaussianBlur(to: image, radius: bilateralRadius)
       if let noiseReduction = CIFilter(name: "CINoiseReduction") {
-        setFilterValue(noiseReduction, preBlur, forKey: kCIInputImageKey)
-        setFilterValue(noiseReduction, 0.02 + clampedStrength * 0.12, forKey: "inputNoiseLevel")
-        setFilterValue(noiseReduction, 0.3 + clampedStrength * 0.3, forKey: "inputSharpness")
+        setFilterValue(noiseReduction, blurred, forKey: kCIInputImageKey)
+        setFilterValue(noiseReduction, 0.02 + clampedStrength * 0.08, forKey: "inputNoiseLevel")
+        setFilterValue(noiseReduction, 0.4 + clampedStrength * 0.4, forKey: "inputSharpness")
         if let output = noiseReduction.outputImage {
           return output.cropped(to: extent)
         }
       }
-      return preBlur.cropped(to: extent)
+      return blurred.cropped(to: extent)
 
     case "smartBlur":
       let softened = applyGaussianBlur(to: image, radius: max(baseRadius * 1.1, 1.0))

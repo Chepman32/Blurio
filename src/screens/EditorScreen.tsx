@@ -39,7 +39,7 @@ import {
 import { useAppLifecycle, useHaptics, useProjectHealthChecks } from '../hooks';
 import { useAppTheme } from '../theme';
 import { useCurrentRenderState, useEditorStore, useSelectedProject } from '../store';
-import type { RootStackParamList } from '../types';
+import type { EditorPanel, RootStackParamList } from '../types';
 import { checkAssetAvailability } from '../utils';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Editor'>;
@@ -199,6 +199,13 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
     ? selectedStrengthValue
     : DEFAULT_KEYFRAME_VALUES.strength;
   const activePanel = ui.activePanel === 'params' ? 'params' : 'regions';
+  const handleSelectPanel = useCallback(
+    (panel: EditorPanel) => {
+      setActivePanel(panel);
+      setSheetExpanded(true);
+    },
+    [setActivePanel, setSheetExpanded],
+  );
   const collapsedSheetHeight = REGIONS_COLLAPSED_HEIGHT;
   const expandedSheetHeight =
     activePanel === 'params' ? PARAMS_EXPANDED_HEIGHT : MAX_SHEET_HEIGHT;
@@ -360,7 +367,7 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
           onTrackRangeChange={setTrackTimeRange}
         />
 
-        <ToolDock activePanel={activePanel} onSelectPanel={setActivePanel} />
+        <ToolDock activePanel={activePanel} onSelectPanel={handleSelectPanel} />
         {activePanel === 'regions' && selectedTrack ? (
           <View
             style={[

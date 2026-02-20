@@ -56,6 +56,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 6,
   },
   scrollContent: {
+    flexGrow: 1,
+    justifyContent: 'center',
     alignItems: 'center',
     gap: SPACING.xs,
     paddingHorizontal: 4,

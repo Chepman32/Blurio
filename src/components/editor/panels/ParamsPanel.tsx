@@ -17,12 +17,12 @@ interface ParamsPanelProps {
 
 type BlurModeTab = Exclude<BlendMode, 'normal' | 'frosted'>;
 
-const resolveActiveBlurMode = (blendMode: BlendMode): BlurModeTab => {
+const resolveActiveBlurMode = (blendMode: BlendMode): BlurModeTab | null => {
   if (blendMode === 'normal') {
-    return 'gaussian';
+    return null;
   }
   if (blendMode === 'frosted') {
-    return 'smartBlur';
+    return null;
   }
   return blendMode;
 };
@@ -88,7 +88,13 @@ export const ParamsPanel: React.FC<ParamsPanelProps> = ({
         ]}
         accessibilityLabel={STRINGS.params.blendMode}
         wrap
-        onChange={onChangeBlendMode}
+        onChange={nextMode => {
+          if (activeBlurMode === nextMode) {
+            onChangeBlendMode('normal');
+            return;
+          }
+          onChangeBlendMode(nextMode);
+        }}
       />
     </ScrollView>
   );

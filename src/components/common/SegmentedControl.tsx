@@ -10,7 +10,7 @@ interface SegmentedOption<T extends string> {
 }
 
 interface SegmentedControlProps<T extends string> {
-  value: T;
+  value: T | null;
   options: SegmentedOption<T>[];
   onChange: (value: T) => void;
   accessibilityLabel: string;
