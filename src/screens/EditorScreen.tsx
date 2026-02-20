@@ -388,9 +388,9 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
               accessibilityLabel={STRINGS.params.strength}
             />
           </View>
-        ) : activePanel === 'params' ? (
-          <View style={styles.strengthCard} />
-        ) : null}
+        ) : (
+          <View style={styles.strengthSpacer} />
+        )}
 
         <SpringBottomSheet
           title={activePanel}
@@ -518,6 +518,10 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 14,
     padding: SPACING.sm,
+    marginBottom: SPACING.sm,
+  },
+  strengthSpacer: {
+    minHeight: 24,
     marginBottom: SPACING.sm,
   },
 });
