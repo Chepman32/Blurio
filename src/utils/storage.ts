@@ -40,10 +40,18 @@ export const clearProjectsStorage = (): void => {
   projectsMMKV.remove(FOLDERS_KEY);
 };
 
-export const loadSettings = (): StoredSettings => ({
-  ...DEFAULT_SETTINGS,
-  ...parseJson<Partial<StoredSettings>>(settingsMMKV.getString(SETTINGS_KEY), {}),
-});
+export const loadSettings = (): StoredSettings => {
+  const stored = parseJson<Partial<StoredSettings>>(settingsMMKV.getString(SETTINGS_KEY), {});
+
+  return {
+    ...DEFAULT_SETTINGS,
+    ...stored,
+    onboarding: {
+      ...DEFAULT_SETTINGS.onboarding,
+      ...stored.onboarding,
+    },
+  };
+};
 
 export const saveSettings = (settings: StoredSettings): void => {
   settingsMMKV.set(SETTINGS_KEY, JSON.stringify(settings));

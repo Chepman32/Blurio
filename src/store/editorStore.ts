@@ -124,6 +124,10 @@ interface BlurioStore {
   setAccentColor: (color: string) => void;
   setAutoGenerateThumbs: (enabled: boolean) => void;
   setSafeAreaOverlayDefault: (enabled: boolean) => void;
+  saveOnboardingProgress: (
+    payload: Partial<StoredSettings['onboarding']>,
+  ) => void;
+  completeOnboarding: () => void;
   pushUndoSnapshot: (description: string) => void;
   undo: () => void;
   redo: () => void;
@@ -2003,6 +2007,42 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
         showSafeAreaOverlay: enabled,
       },
     });
+  },
+
+  saveOnboardingProgress: payload => {
+    const state = get();
+    const onboarding = {
+      ...state.settings.onboarding,
+      ...payload,
+    };
+
+    const settings = {
+      ...state.settings,
+      onboarding,
+    };
+
+    persistSettings(settings);
+    set({ settings });
+  },
+
+  completeOnboarding: () => {
+    const state = get();
+    if (state.settings.onboarding.completed) {
+      return;
+    }
+
+    const settings = {
+      ...state.settings,
+      onboarding: {
+        ...state.settings.onboarding,
+        completed: true,
+        completedAt: Date.now(),
+        lastSeenStep: 'completed',
+      },
+    };
+
+    persistSettings(settings);
+    set({ settings });
   },
 
   pushUndoSnapshot: description => {

@@ -66,6 +66,17 @@ export const DEFAULT_SETTINGS: StoredSettings = {
   autoGenerateThumbs: true,
   safeAreaOverlayDefault: false,
   regionTemplates: [],
+  onboarding: {
+    completed: false,
+    goalId: null,
+    painPointIds: [],
+    preferenceIds: [],
+    affirmedStatementIds: [],
+    demoSelectionIds: [],
+    paywallIntent: null,
+    lastSeenStep: null,
+    completedAt: null,
+  },
 };
 
 export const THEME_BY_APPEARANCE: Record<'dark' | 'light', ThemeColors> = {

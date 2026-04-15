@@ -15,6 +15,7 @@ import Animated, {
   withTiming,
 } from 'react-native-reanimated';
 import { GradientBackground, AppText } from '../components/common';
+import { useEditorStore } from '../store';
 import type { RootStackParamList } from '../types';
 import { SPACING, STRINGS } from '../constants';
 import { useAppTheme } from '../theme';
@@ -64,7 +65,8 @@ const shards: SplashShardModel[] = Array.from({ length: PARTICLE_COUNT }, (_, in
     Math.floor((normalizedX * 0.6 + normalizedY * 0.4) * ICON_PALETTE.length),
   );
   const centerDist = Math.hypot(normalizedX - 0.5, normalizedY - 0.5);
-  const color = centerDist < 0.2 ? '#F4F6FC' : ICON_PALETTE[paletteIndex];
+  const color =
+    centerDist < 0.2 ? '#F4F6FC' : (ICON_PALETTE[paletteIndex] ?? '#F4F6FC');
 
   return {
     id: `shard-${index}`,
@@ -127,6 +129,9 @@ export const SplashScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useAppTheme();
   const { impact } = useHaptics();
   const reduceMotion = useReducedMotion();
+  const hasCompletedOnboarding = useEditorStore(
+    state => state.settings.onboarding.completed,
+  );
 
   const scatter = useSharedValue(1);
   const particleOpacity = useSharedValue(1);
@@ -144,7 +149,7 @@ export const SplashScreen: React.FC<Props> = ({ navigation }) => {
       });
 
       const timer = setTimeout(() => {
-        navigation.replace('Home');
+        navigation.replace(hasCompletedOnboarding ? 'Home' : 'Onboarding');
       }, 1100);
 
       return () => clearTimeout(timer);
@@ -197,11 +202,12 @@ export const SplashScreen: React.FC<Props> = ({ navigation }) => {
     );
 
     const timer = setTimeout(() => {
-      navigation.replace('Home');
+      navigation.replace(hasCompletedOnboarding ? 'Home' : 'Onboarding');
     }, 1650);
 
     return () => clearTimeout(timer);
   }, [
+    hasCompletedOnboarding,
     iconOpacity,
     impact,
     logoOpacity,

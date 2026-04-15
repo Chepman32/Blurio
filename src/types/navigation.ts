@@ -2,6 +2,7 @@ import type { Project } from './domain';
 
 export type RootStackParamList = {
   Splash: undefined;
+  Onboarding: undefined;
   Home: undefined;
   Import: { fromProjectId?: string } | undefined;
   Editor: { projectId: string; fromImport?: boolean };

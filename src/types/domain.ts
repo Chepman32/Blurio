@@ -190,6 +190,18 @@ export interface RegionTemplate {
   updatedAt: UnixMs;
 }
 
+export interface StoredOnboardingState {
+  completed: boolean;
+  goalId: string | null;
+  painPointIds: string[];
+  preferenceIds: string[];
+  affirmedStatementIds: string[];
+  demoSelectionIds: string[];
+  paywallIntent: 'trial' | 'free' | null;
+  lastSeenStep: string | null;
+  completedAt: UnixMs | null;
+}
+
 export interface StoredSettings {
   appearance: 'system' | 'dark' | 'light';
   reduceMotionOverride: 'system' | 'on' | 'off';
@@ -198,4 +210,5 @@ export interface StoredSettings {
   autoGenerateThumbs: boolean;
   safeAreaOverlayDefault: boolean;
   regionTemplates: RegionTemplate[];
+  onboarding: StoredOnboardingState;
 }

@@ -7,6 +7,7 @@ import {
   ExportScreen,
   HomeScreen,
   ImportScreen,
+  OnboardingScreen,
   SettingsScreen,
   SplashScreen,
 } from '../screens';
@@ -62,6 +63,11 @@ export const RootNavigator: React.FC = () => {
           name="Splash"
           component={SplashScreen}
           options={{ headerShown: false, animation: 'fade' }}
+        />
+        <Stack.Screen
+          name="Onboarding"
+          component={OnboardingScreen}
+          options={{ headerShown: false, animation: 'fade_from_bottom' }}
         />
         <Stack.Screen
           name="Home"

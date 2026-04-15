@@ -38,7 +38,6 @@ interface EditorCanvasProps {
 
 const HANDLE_MIN_SIZE = 0.08;
 const HANDLE_SNAP_THRESHOLD = 0.02;
-const STORE_THROTTLE_FRAMES = 4;
 
 export const EditorCanvas: React.FC<EditorCanvasProps> = ({
   project,
@@ -124,7 +123,6 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
   const snapHorizontalShared = useSharedValue(false);
   const gestureAxisX = useSharedValue<number>(0);
   const gestureAxisY = useSharedValue<number>(0);
-  const frameCount = useSharedValue(0);
 
   const updateCanvasTransform = (zoom: number, panX: number, panY: number) => {
     onCanvasTransformChange(zoom, panX, panY);
@@ -156,21 +154,6 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
     [onUpdateTrackValues, onEndTrackInteraction],
   );
 
-  // JS callback: throttled store update during gesture
-  const throttledUpdate = useCallback(
-    (x: number, y: number, w: number, h: number) => {
-      onUpdateTrackValues({ x, y, width: w, height: h });
-    },
-    [onUpdateTrackValues],
-  );
-
-  // JS callback: throttled pan update
-  const throttledPanUpdate = useCallback(
-    (x: number, y: number) => {
-      onUpdateTrackValues({ x, y });
-    },
-    [onUpdateTrackValues],
-  );
 
   // JS callback: commit pinch final values and end interaction
   const commitPinchAndEnd = useCallback(
@@ -295,7 +278,6 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
     moveStartY.value = liveY.value;
     startWidth.value = liveW.value;
     startHeight.value = liveH.value;
-    frameCount.value = 0;
     runOnJS(beginTrackInteraction)();
   };
 
@@ -366,12 +348,6 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
       snapHorizontalShared.value = snapY;
       runOnJS(setSnapHorizontal)(snapY);
     }
-
-    // Throttled store update for native preview sync
-    frameCount.value += 1;
-    if (frameCount.value % STORE_THROTTLE_FRAMES === 0) {
-      runOnJS(throttledUpdate)(x, y, width, height);
-    }
   };
 
   // Worklet: resize end — commit final values to store
@@ -425,7 +401,6 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
         return;
       }
       isGesturing.value = 1;
-      frameCount.value = 0;
       moveStartX.value = liveX.value;
       moveStartY.value = liveY.value;
       beginTrackInteractionWorklet();
@@ -465,12 +440,6 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
         snapHorizontalShared.value = snapY;
         runOnJS(setSnapHorizontal)(snapY);
       }
-
-      // Throttled store update
-      frameCount.value += 1;
-      if (frameCount.value % STORE_THROTTLE_FRAMES === 0) {
-        runOnJS(throttledPanUpdate)(x, y);
-      }
     })
     .onFinalize(() => {
       if (!selectedTrack) {
@@ -498,7 +467,6 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
       }
 
       isGesturing.value = 1;
-      frameCount.value = 0;
       beginTrackInteractionWorklet();
       startWidth.value = liveW.value;
       startHeight.value = liveH.value;
@@ -514,12 +482,6 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
       // Instant visual update
       liveW.value = width;
       liveH.value = height;
-
-      // Throttled store update
-      frameCount.value += 1;
-      if (frameCount.value % STORE_THROTTLE_FRAMES === 0) {
-        runOnJS(throttledUpdate)(liveX.value, liveY.value, width, height);
-      }
     })
     .onFinalize(() => {
       if (!selectedTrack) {
