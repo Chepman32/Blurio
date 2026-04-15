@@ -666,14 +666,15 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
             </AppText>
             <GlassCard style={styles.preferenceSummaryCard}>
               <View style={styles.preferenceSummaryHeader}>
-                <View>
+                <View style={styles.preferenceSummaryCopy}>
                   <AppText variant="micro" color={colors.accent}>
                     Tailored for your first demo
                   </AppText>
                   <AppText variant="bodyStrong">
-                    {preferenceIds.length === 0
-                      ? 'Choose a few blur targets to customize the walkthrough.'
-                      : `${preferenceIds.length} preset${preferenceIds.length === 1 ? '' : 's'} selected.`}
+                    Choose your starter blur targets.
+                  </AppText>
+                  <AppText variant="micro" color={colors.textSecondary}>
+                    These picks shape the walkthrough below and can be changed later.
                   </AppText>
                 </View>
                 <View
@@ -1457,6 +1458,11 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     justifyContent: 'space-between',
     gap: SPACING.sm,
+  },
+  preferenceSummaryCopy: {
+    flex: 1,
+    gap: 2,
+    minHeight: 56,
   },
   preferenceCountPill: {
     paddingHorizontal: SPACING.sm,
