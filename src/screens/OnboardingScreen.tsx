@@ -115,7 +115,7 @@ const buildDemoOrder = (goalId: string | null, preferenceIds: string[]): DemoTar
 
 const getGoalCopy = (goalId: string | null): string => {
   const goal = ONBOARDING_GOALS.find(item => item.id === goalId);
-  return goal?.title.toLowerCase() ?? 'protect what matters';
+  return goal?.goalPhrase ?? STRINGS.onboarding.defaultGoalPhrase;
 };
 
 const ProgressBar: React.FC<{ index: number; colors: ReturnType<typeof useAppTheme>['colors'] }> =
@@ -146,7 +146,7 @@ const PreviewDevice: React.FC<{ colors: ReturnType<typeof useAppTheme>['colors']
         <View style={[styles.previewBadge, { backgroundColor: `${colors.accent}22` }]}>
           <Shield size={14} color={colors.accent} />
           <AppText variant="micro" color={colors.accent}>
-            Privacy-first
+            {STRINGS.onboarding.welcomeMetricPrivate}
           </AppText>
         </View>
         <View style={[styles.previewDot, { backgroundColor: colors.success }]} />
@@ -162,7 +162,7 @@ const PreviewDevice: React.FC<{ colors: ReturnType<typeof useAppTheme>['colors']
         <View style={[styles.previewFace, { borderColor: '#7DD3FC' }]} />
         <View style={[styles.previewPlate, { borderColor: '#FBBF24' }]} />
         <View style={[styles.previewBadgeFloat, { backgroundColor: `${colors.sheet}CC` }]}>
-          <AppText variant="micro">Face</AppText>
+          <AppText variant="micro">{STRINGS.onboarding.previewFaceChip}</AppText>
         </View>
       </View>
 
@@ -173,12 +173,12 @@ const PreviewDevice: React.FC<{ colors: ReturnType<typeof useAppTheme>['colors']
         <View style={styles.timelineChips}>
           <View style={[styles.timelineChip, { backgroundColor: `${colors.accent}22` }]}>
             <AppText variant="micro" color={colors.accent}>
-              Face area
+              {STRINGS.editor.faceTemplate}
             </AppText>
           </View>
           <View style={[styles.timelineChip, { backgroundColor: `${colors.warning}22` }]}>
             <AppText variant="micro" color={colors.warning}>
-              Plate area
+              {STRINGS.editor.plateTemplate}
             </AppText>
           </View>
         </View>
@@ -232,18 +232,18 @@ const ComparisonTable: React.FC<{ colors: ReturnType<typeof useAppTheme>['colors
 }) => (
   <GlassCard style={styles.comparisonCard}>
     <AppText variant="bodyStrong" style={styles.comparisonTitle}>
-      Keep the workflow private and short
+      {STRINGS.onboarding.comparisonTitle}
     </AppText>
     <View style={styles.comparisonHeader}>
       <AppText variant="micro" color={colors.textMuted}>
-        What matters
+        {STRINGS.onboarding.comparisonWhatMatters}
       </AppText>
       <View style={styles.comparisonHeaderRight}>
         <AppText variant="micro" color={colors.accent}>
-          Blurio
+          {STRINGS.onboarding.comparisonWithApp}
         </AppText>
         <AppText variant="micro" color={colors.textMuted}>
-          Without
+          {STRINGS.onboarding.comparisonWithout}
         </AppText>
       </View>
     </View>
@@ -471,9 +471,10 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
   };
 
   const shareSetup = async () => {
-    const labels = resultTargets.map(item => item.label.toLowerCase()).join(', ');
     await Share.share({
-      message: `I just set up Blurio to protect ${labels || 'private details'} before I share video.`,
+      message: STRINGS.onboarding.shareSetupMessage(
+        resultTargets.map(item => item.label),
+      ),
     });
   };
 
@@ -499,15 +500,14 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
               <View style={[styles.heroBadge, { backgroundColor: `${colors.accent}22` }]}>
                 <Lock size={14} color={colors.accent} />
                 <AppText variant="micro" color={colors.accent}>
-                  Offline privacy workflow
+                  {STRINGS.onboarding.welcomeBadge}
                 </AppText>
               </View>
               <AppText style={styles.heroTitle}>
-                Share the clip, not the private details.
+                {STRINGS.onboarding.welcomeTitle}
               </AppText>
               <AppText variant="body" color={colors.textSecondary} style={styles.heroBody}>
-                Blur faces, plates, addresses, and badges on-device before anything leaves
-                your phone.
+                {STRINGS.onboarding.welcomeBody}
               </AppText>
             </View>
 
@@ -516,15 +516,15 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
             <GlassCard style={styles.metricStrip}>
               <View style={styles.metricItem}>
                 <Shield size={16} color={colors.accent} />
-                <AppText variant="micro">Private by default</AppText>
+                <AppText variant="micro">{STRINGS.onboarding.welcomeMetricPrivate}</AppText>
               </View>
               <View style={styles.metricItem}>
                 <CloudOff size={16} color={colors.accent} />
-                <AppText variant="micro">No upload-first workflow</AppText>
+                <AppText variant="micro">{STRINGS.onboarding.welcomeMetricNoUpload}</AppText>
               </View>
               <View style={styles.metricItem}>
                 <Wand2 size={16} color={colors.accent} />
-                <AppText variant="micro">Fast blur presets</AppText>
+                <AppText variant="micro">{STRINGS.onboarding.welcomeMetricFastPresets}</AppText>
               </View>
             </GlassCard>
           </Animated.View>
@@ -532,9 +532,9 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
       case 'goal':
         return (
           <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
-            <AppText style={styles.stepTitle}>What are you here to protect first?</AppText>
+            <AppText style={styles.stepTitle}>{STRINGS.onboarding.goalTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
-              Pick the one outcome that would make Blurio immediately useful.
+              {STRINGS.onboarding.goalLead}
             </AppText>
             <View style={styles.cardList}>
               {ONBOARDING_GOALS.map(item => (
@@ -552,11 +552,9 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
       case 'pains':
         return (
           <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
-            <AppText style={styles.stepTitle}>
-              What gets in the way of {getGoalCopy(goalId)}?
-            </AppText>
+            <AppText style={styles.stepTitle}>{STRINGS.onboarding.painsTitle(getGoalCopy(goalId))}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
-              Pick every frustration that feels true right now.
+              {STRINGS.onboarding.painsLead}
             </AppText>
             <View style={styles.cardList}>
               {ONBOARDING_PAIN_POINTS.map(item => (
@@ -574,10 +572,9 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
       case 'proof':
         return (
           <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
-            <AppText style={styles.stepTitle}>People use Blurio for the exact same reason.</AppText>
+            <AppText style={styles.stepTitle}>{STRINGS.onboarding.proofTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
-              These are placeholder testimonials for now, but they match the job this app is
-              already built to do.
+              {STRINGS.onboarding.proofLead}
             </AppText>
             <View style={styles.cardList}>
               {ONBOARDING_TESTIMONIALS.map(item => (
@@ -606,14 +603,16 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
       case 'statements':
         return (
           <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
-            <AppText style={styles.stepTitle}>Which of these sounds familiar?</AppText>
+            <AppText style={styles.stepTitle}>{STRINGS.onboarding.statementsTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
-              Quick gut reaction. We are building around the friction you actually feel.
+              {STRINGS.onboarding.statementsLead}
             </AppText>
             <GlassCard style={styles.statementCard}>
               <AppText variant="micro" color={colors.accent}>
-                Card {Math.min(statementCursor + 1, ONBOARDING_STATEMENTS.length)} of{' '}
-                {ONBOARDING_STATEMENTS.length}
+                {STRINGS.onboarding.statementProgress(
+                  Math.min(statementCursor + 1, ONBOARDING_STATEMENTS.length),
+                  ONBOARDING_STATEMENTS.length,
+                )}
               </AppText>
               <AppText style={styles.statementQuote}>{activeStatement?.quote}</AppText>
               <View style={styles.statementDots}>
@@ -636,10 +635,9 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
       case 'solution':
         return (
           <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
-            <AppText style={styles.stepTitle}>Here is the smarter way through it.</AppText>
+            <AppText style={styles.stepTitle}>{STRINGS.onboarding.solutionTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
-              Blurio is strongest when the job is simple: protect the frame, preview it live,
-              and export without a privacy handoff.
+              {STRINGS.onboarding.solutionLead}
             </AppText>
             <View style={styles.cardList}>
               {solutionItems.map(item => (
@@ -660,21 +658,21 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
       case 'preferences':
         return (
           <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
-            <AppText style={styles.stepTitle}>Which blur presets should be ready first?</AppText>
+            <AppText style={styles.stepTitle}>{STRINGS.onboarding.preferencesTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
-              Pick the details you hide most often and the demo will adapt to them.
+              {STRINGS.onboarding.preferencesLead}
             </AppText>
             <GlassCard style={styles.preferenceSummaryCard}>
               <View style={styles.preferenceSummaryHeader}>
                 <View style={styles.preferenceSummaryCopy}>
                   <AppText variant="micro" color={colors.accent}>
-                    Tailored for your first demo
+                    {STRINGS.onboarding.preferencesSummaryEyebrow}
                   </AppText>
                   <AppText variant="bodyStrong">
-                    Choose your starter blur targets.
+                    {STRINGS.onboarding.preferencesSummaryTitle}
                   </AppText>
                   <AppText variant="micro" color={colors.textSecondary}>
-                    These picks shape the walkthrough below and can be changed later.
+                    {STRINGS.onboarding.preferencesSummaryBody}
                   </AppText>
                 </View>
                 <View
@@ -690,7 +688,7 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
               {recommendedPreferenceIds.length > 0 ? (
                 <View style={styles.preferenceHintRow}>
                   <AppText variant="micro" color={colors.textMuted}>
-                    Best matches:
+                    {STRINGS.onboarding.preferencesBestMatches}
                   </AppText>
                   <View style={styles.preferenceHintChips}>
                     {recommendedPreferenceIds.map(id => {
@@ -760,7 +758,7 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
                       <View style={styles.preferenceTextBlock}>
                         {recommended ? (
                           <AppText variant="micro" color={item.accent}>
-                            Recommended
+                            {STRINGS.onboarding.preferencesRecommended}
                           </AppText>
                         ) : null}
                         <AppText variant="bodyStrong" numberOfLines={2} style={styles.preferenceTitle}>
@@ -776,7 +774,9 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
                       </AppText>
                       <View style={styles.preferenceFooter}>
                         <AppText variant="micro" color={active ? item.accent : colors.textMuted}>
-                          {active ? 'Included in demo' : 'Tap to include'}
+                          {active
+                            ? STRINGS.onboarding.preferencesIncluded
+                            : STRINGS.onboarding.preferencesTapToInclude}
                         </AppText>
                       </View>
                     </GlassCard>
@@ -789,10 +789,9 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
       case 'permissions':
         return (
           <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
-            <AppText style={styles.stepTitle}>Bring clips in and save them back privately.</AppText>
+            <AppText style={styles.stepTitle}>{STRINGS.onboarding.permissionsTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
-              Blurio uses Photos access so you can import a video, blur the right details, and
-              save the cleaned version back out.
+              {STRINGS.onboarding.permissionsLead}
             </AppText>
             <GlassCard style={styles.permissionCard}>
               <View style={[styles.permissionIcon, { backgroundColor: `${colors.accent}22` }]}>
@@ -801,19 +800,21 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
               <View style={styles.permissionBulletList}>
                 <View style={styles.permissionBullet}>
                   <Check size={16} color={colors.success} />
-                  <AppText variant="bodyStrong">Import from Photos in one tap</AppText>
+                  <AppText variant="bodyStrong">{STRINGS.onboarding.permissionsImport}</AppText>
                 </View>
                 <View style={styles.permissionBullet}>
                   <Check size={16} color={colors.success} />
-                  <AppText variant="bodyStrong">Export private-ready edits back to your library</AppText>
+                  <AppText variant="bodyStrong">{STRINGS.onboarding.permissionsExport}</AppText>
                 </View>
                 <View style={styles.permissionBullet}>
                   <Check size={16} color={colors.success} />
-                  <AppText variant="bodyStrong">System prompts stay attached to the real task</AppText>
+                  <AppText variant="bodyStrong">
+                    {STRINGS.onboarding.permissionsSystemPrompts}
+                  </AppText>
                 </View>
               </View>
               <AppText variant="micro" color={colors.textMuted}>
-                Blurio will ask when you import and save your first clip.
+                {STRINGS.onboarding.permissionsFooter}
               </AppText>
             </GlassCard>
           </Animated.View>
@@ -822,22 +823,22 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
         return (
           <Animated.View entering={FadeInDown.duration(220)} style={styles.processingStep}>
             <ProcessingPulse colors={colors} />
-            <AppText style={styles.stepTitle}>Building your privacy starter pack…</AppText>
+            <AppText style={styles.stepTitle}>{STRINGS.onboarding.processingTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.processingLead}>
-              Setting up the fastest path for {getGoalCopy(goalId)}.
+              {STRINGS.onboarding.processingLead(getGoalCopy(goalId))}
             </AppText>
             <GlassCard style={styles.processingCard}>
               <View style={styles.processingChecklistItem}>
                 <Check size={16} color={colors.success} />
-                <AppText variant="bodyStrong">Focused blur presets selected</AppText>
+                <AppText variant="bodyStrong">{STRINGS.onboarding.processingSelected}</AppText>
               </View>
               <View style={styles.processingChecklistItem}>
                 <Check size={16} color={colors.success} />
-                <AppText variant="bodyStrong">On-device workflow confirmed</AppText>
+                <AppText variant="bodyStrong">{STRINGS.onboarding.processingOnDevice}</AppText>
               </View>
               <View style={styles.processingChecklistItem}>
                 <Check size={16} color={colors.success} />
-                <AppText variant="bodyStrong">First demo scenes queued</AppText>
+                <AppText variant="bodyStrong">{STRINGS.onboarding.processingDemoQueued}</AppText>
               </View>
             </GlassCard>
           </Animated.View>
@@ -845,15 +846,16 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
       case 'demo':
         return (
           <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
-            <AppText style={styles.stepTitle}>Try the core interaction before you commit.</AppText>
+            <AppText style={styles.stepTitle}>{STRINGS.onboarding.demoTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
-              Pick {RESULT_SELECTION_COUNT} details you would blur first. This is the smallest
-              version of Blurio’s real loop.
+              {STRINGS.onboarding.demoLead(RESULT_SELECTION_COUNT)}
             </AppText>
             <View style={styles.demoCounterRow}>
               <AppText variant="micro" color={colors.accent}>
-                {Math.min(demoSelectionIds.length, RESULT_SELECTION_COUNT)} of {RESULT_SELECTION_COUNT}{' '}
-                selected
+                {STRINGS.onboarding.demoSelected(
+                  Math.min(demoSelectionIds.length, RESULT_SELECTION_COUNT),
+                  RESULT_SELECTION_COUNT,
+                )}
               </AppText>
               <View style={styles.demoCounterChips}>
                 {resultTargets.map(item => (
@@ -881,9 +883,9 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
               </>
             ) : (
               <GlassCard style={styles.demoDetailCard}>
-                <AppText variant="bodyStrong">Your starter pack is ready.</AppText>
+                <AppText variant="bodyStrong">{STRINGS.onboarding.demoReadyTitle}</AppText>
                 <AppText variant="body" color={colors.textSecondary}>
-                  Moving to the result view now.
+                  {STRINGS.onboarding.demoReadyBody}
                 </AppText>
               </GlassCard>
             )}
@@ -892,18 +894,17 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
       case 'value':
         return (
           <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
-            <AppText style={styles.stepTitle}>Your first privacy-ready setup is built.</AppText>
+            <AppText style={styles.stepTitle}>{STRINGS.onboarding.valueTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
-              This is the output moment: a focused starter pack for the exact details you want
-              to protect.
+              {STRINGS.onboarding.valueLead}
             </AppText>
             <GlassCard style={styles.resultCard}>
               <View style={styles.resultHeader}>
                 <View>
                   <AppText variant="micro" color={colors.accent}>
-                    Ready for your first real clip
+                    {STRINGS.onboarding.valueEyebrow}
                   </AppText>
-                  <AppText style={styles.resultTitle}>Blurio Starter Pack</AppText>
+                  <AppText style={styles.resultTitle}>{STRINGS.onboarding.valueCardTitle}</AppText>
                 </View>
                 <Image source={require('../assets/appIcon.png')} style={styles.resultIcon} />
               </View>
@@ -932,15 +933,15 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
 
             <View style={styles.metricRow}>
               <GlassCard style={styles.metricCard}>
-                <AppText variant="bodyStrong">On-device</AppText>
+                <AppText variant="bodyStrong">{STRINGS.onboarding.valueMetricOnDeviceTitle}</AppText>
                 <AppText variant="micro" color={colors.textSecondary}>
-                  No upload-first privacy workflow
+                  {STRINGS.onboarding.valueMetricOnDeviceBody}
                 </AppText>
               </GlassCard>
               <GlassCard style={styles.metricCard}>
-                <AppText variant="bodyStrong">Export control</AppText>
+                <AppText variant="bodyStrong">{STRINGS.onboarding.valueMetricExportTitle}</AppText>
                 <AppText variant="micro" color={colors.textSecondary}>
-                  Resolution, codec, and audio stay editable
+                  {STRINGS.onboarding.valueMetricExportBody}
                 </AppText>
               </GlassCard>
             </View>
@@ -954,21 +955,20 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
                 <Image source={require('../assets/appIcon.png')} style={styles.paywallIcon} />
                 <View style={styles.paywallHeadCopy}>
                   <AppText variant="micro" color={colors.accent}>
-                    Placeholder paywall
+                    {STRINGS.onboarding.paywallEyebrow}
                   </AppText>
-                  <AppText style={styles.stepTitle}>Keep every private edit in one fast workflow.</AppText>
+                  <AppText style={styles.stepTitle}>{STRINGS.onboarding.paywallTitle}</AppText>
                 </View>
               </View>
 
               <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
-                Blurio does not have subscription wiring yet, so this screen is a polished
-                placeholder ready for your purchase SDK.
+                {STRINGS.onboarding.paywallLead}
               </AppText>
 
               <View style={styles.paywallPriceWrap}>
-                <AppText style={styles.priceTitle}>7-day free trial</AppText>
+                <AppText style={styles.priceTitle}>{STRINGS.onboarding.paywallTrialTitle}</AppText>
                 <AppText variant="body" color={colors.textSecondary}>
-                  then $29.99/year
+                  {STRINGS.onboarding.paywallTrialPrice}
                 </AppText>
               </View>
 
@@ -987,9 +987,9 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
                     <Star key={`paywall-star-${index}`} size={12} color="#FDBA74" fill="#FDBA74" />
                   ))}
                 </View>
-                <AppText variant="bodyStrong">“The fastest way to make a clip share-safe.”</AppText>
+                <AppText variant="bodyStrong">{STRINGS.onboarding.paywallReviewTitle}</AppText>
                 <AppText variant="micro" color={colors.textSecondary}>
-                  Placeholder review until you replace this with a real subscriber quote.
+                  {STRINGS.onboarding.paywallReviewBody}
                 </AppText>
               </GlassCard>
             </GlassCard>
@@ -1005,26 +1005,26 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
       case 'welcome':
         return (
           <BlurButton
-            label="Make my first private edit"
+            label={STRINGS.onboarding.footerWelcome}
             onPress={goNext}
-            accessibilityLabel="Make my first private edit"
+            accessibilityLabel={STRINGS.onboarding.footerWelcome}
           />
         );
       case 'goal':
         return (
           <BlurButton
-            label="This is why I downloaded Blurio"
+            label={STRINGS.onboarding.footerGoal}
             onPress={goNext}
             disabled={!goalId}
-            accessibilityLabel="Continue with selected goal"
+            accessibilityLabel={STRINGS.onboarding.footerGoal}
           />
         );
       case 'pains':
         return (
           <BlurButton
-            label="Show me the better workflow"
+            label={STRINGS.onboarding.footerPains}
             onPress={goNext}
-            accessibilityLabel="Continue after pain points"
+            accessibilityLabel={STRINGS.onboarding.footerPains}
           />
         );
       case 'proof':
@@ -1032,23 +1032,23 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
           <BlurButton
             label={STRINGS.common.continue}
             onPress={goNext}
-            accessibilityLabel="Continue after testimonials"
+            accessibilityLabel={STRINGS.accessibility.continueAfterTestimonials}
           />
         );
       case 'statements':
         return (
           <View style={styles.dualFooter}>
             <BlurButton
-              label="Not really"
+              label={STRINGS.onboarding.footerNotReally}
               onPress={() => onSelectStatement(false)}
-              accessibilityLabel="Dismiss statement"
+              accessibilityLabel={STRINGS.onboarding.footerNotReally}
               variant="secondary"
               style={styles.flexButton}
             />
             <BlurButton
-              label="That is me"
+              label={STRINGS.onboarding.footerThatIsMe}
               onPress={() => onSelectStatement(true)}
-              accessibilityLabel="Agree with statement"
+              accessibilityLabel={STRINGS.onboarding.footerThatIsMe}
               style={styles.flexButton}
             />
           </View>
@@ -1056,25 +1056,25 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
       case 'solution':
         return (
           <BlurButton
-            label="Set up my blur starter pack"
+            label={STRINGS.onboarding.footerSolution}
             onPress={goNext}
-            accessibilityLabel="Continue to preferences"
+            accessibilityLabel={STRINGS.onboarding.footerSolution}
           />
         );
       case 'preferences':
         return (
           <BlurButton
-            label="Build my starter pack"
+            label={STRINGS.onboarding.footerPreferences}
             onPress={goNext}
-            accessibilityLabel="Build starter pack"
+            accessibilityLabel={STRINGS.onboarding.footerPreferences}
           />
         );
       case 'permissions':
         return (
           <BlurButton
-            label="I am ready"
+            label={STRINGS.onboarding.footerReady}
             onPress={goNext}
-            accessibilityLabel="Continue after permission primer"
+            accessibilityLabel={STRINGS.onboarding.footerReady}
           />
         );
       case 'processing':
@@ -1083,16 +1083,16 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
         return activeDemoTarget ? (
           <View style={styles.dualFooter}>
             <BlurButton
-              label="Skip this"
+              label={STRINGS.onboarding.footerSkipThis}
               onPress={() => onSelectDemoTarget(false)}
-              accessibilityLabel="Skip demo target"
+              accessibilityLabel={STRINGS.onboarding.footerSkipThis}
               variant="secondary"
               style={styles.flexButton}
             />
             <BlurButton
-              label="Blur it"
+              label={STRINGS.onboarding.footerBlurIt}
               onPress={() => onSelectDemoTarget(true)}
-              accessibilityLabel="Add demo target"
+              accessibilityLabel={STRINGS.onboarding.footerBlurIt}
               style={styles.flexButton}
             />
           </View>
@@ -1101,16 +1101,16 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
         return (
           <View style={styles.valueFooter}>
             <BlurButton
-              label="Show me the plans"
+              label={STRINGS.onboarding.footerPlans}
               onPress={() => setStepIndex(STEP_INDEX.paywall)}
-              accessibilityLabel="Continue to paywall"
+              accessibilityLabel={STRINGS.onboarding.footerPlans}
             />
             <BlurButton
-              label="Share my setup"
+              label={STRINGS.onboarding.footerShare}
               onPress={() => {
                 shareSetup().catch(() => undefined);
               }}
-              accessibilityLabel="Share onboarding result"
+              accessibilityLabel={STRINGS.onboarding.footerShare}
               variant="secondary"
             />
           </View>
@@ -1119,14 +1119,14 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
         return (
           <View style={styles.valueFooter}>
             <BlurButton
-              label="Start 7-day trial"
+              label={STRINGS.onboarding.footerStartTrial}
               onPress={() => finishOnboarding('trial')}
-              accessibilityLabel="Start placeholder trial"
+              accessibilityLabel={STRINGS.onboarding.footerStartTrial}
             />
             <BlurButton
-              label="Continue with free tools"
+              label={STRINGS.onboarding.footerContinueFree}
               onPress={() => finishOnboarding('free')}
-              accessibilityLabel="Continue with free tools"
+              accessibilityLabel={STRINGS.onboarding.footerContinueFree}
               variant="secondary"
             />
           </View>

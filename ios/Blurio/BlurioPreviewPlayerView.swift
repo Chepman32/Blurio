@@ -601,7 +601,14 @@ final class BlurioPreviewPlayerView: UIView {
     case .readyToPlay:
       onReady?([:])
     case .failed:
-      let msg = error?.localizedDescription ?? "Playback failed"
+      let msg = error?.localizedDescription
+        ?? NSLocalizedString(
+          "playback_failed",
+          tableName: nil,
+          bundle: .main,
+          value: "Playback failed",
+          comment: "Fallback playback error for preview player",
+        )
       onPreviewError?(["message": msg])
     default:
       break

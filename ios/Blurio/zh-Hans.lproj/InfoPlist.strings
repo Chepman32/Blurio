@@ -1,0 +1,2 @@
+"NSPhotoLibraryUsageDescription" = "Blurio 需要访问照片库，以便导入视频并离线完成模糊编辑。";
+"NSPhotoLibraryAddUsageDescription" = "Blurio 需要权限，才能把导出的视频保存到你的资料库。";

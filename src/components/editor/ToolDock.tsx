@@ -40,7 +40,7 @@ export const ToolDock: React.FC<ToolDockProps> = ({
             label={item.label}
             selected={activePanel === item.panel}
             onPress={() => onSelectPanel(item.panel)}
-            accessibilityLabel={`Open ${item.label} panel`}
+            accessibilityLabel={STRINGS.accessibility.openPanel(item.label)}
           />
         ))}
       </ScrollView>

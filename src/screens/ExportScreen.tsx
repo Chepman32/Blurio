@@ -223,7 +223,7 @@ export const ExportScreen: React.FC<Props> = ({ navigation, route }) => {
               options={[
                 { label: '720p', value: '720p' },
                 { label: '1080p', value: '1080p' },
-                { label: '4K', value: '4k' },
+                { label: STRINGS.export.resolution4k, value: '4k' },
               ]}
               onChange={value => updatePreset('resolution', value)}
               accessibilityLabel={STRINGS.export.resolutionLabel}

@@ -7,7 +7,7 @@ import Animated, {
   useSharedValue,
   withSpring,
 } from 'react-native-reanimated';
-import { RADIUS } from '../../constants';
+import { RADIUS, STRINGS } from '../../constants';
 import { useAppTheme } from '../../theme';
 import { AppText } from './AppText';
 
@@ -112,7 +112,7 @@ export const SpringBottomSheet: React.FC<SpringBottomSheetProps> = ({
       {expanded ? (
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={`Collapse ${title}`}
+          accessibilityLabel={STRINGS.accessibility.collapseSheet(title)}
           onPress={() => onExpandedChange(false)}
           style={styles.backdrop}
         />

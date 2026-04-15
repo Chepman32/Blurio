@@ -31,6 +31,29 @@ export const KeyframesPanel: React.FC<KeyframesPanelProps> = ({
   onToggleParameter,
 }) => {
   const { colors } = useAppTheme();
+  const getParameterLabel = (parameter: KeyframeParameter): string => {
+    switch (parameter) {
+      case 'x':
+        return STRINGS.params.positionX;
+      case 'y':
+        return STRINGS.params.positionY;
+      case 'width':
+        return STRINGS.params.width;
+      case 'height':
+        return STRINGS.params.height;
+      case 'rotation':
+        return STRINGS.params.rotation;
+      case 'strength':
+        return STRINGS.params.strength;
+      case 'feather':
+        return STRINGS.params.feather;
+      case 'opacity':
+        return STRINGS.params.opacity;
+      case 'cornerRadius':
+      default:
+        return STRINGS.params.cornerRadius;
+    }
+  };
 
   return (
     <View style={styles.container}>
@@ -65,11 +88,12 @@ export const KeyframesPanel: React.FC<KeyframesPanelProps> = ({
       <View style={styles.paramsWrap}>
         {PARAMETERS.map(parameter => {
           const enabled = enabledParameters[parameter];
+          const label = getParameterLabel(parameter);
           return (
             <Pressable
               key={parameter}
               accessibilityRole="switch"
-              accessibilityLabel={`${parameter} keyframe parameter`}
+              accessibilityLabel={STRINGS.accessibility.keyframeParameter(label)}
               onPress={() => onToggleParameter(parameter, !enabled)}
               style={[
                 styles.parameterChip,
@@ -81,7 +105,7 @@ export const KeyframesPanel: React.FC<KeyframesPanelProps> = ({
               <AppText
                 variant="micro"
                 color={enabled ? colors.accent : colors.textMuted}>
-                {parameter}
+                {label}
               </AppText>
             </Pressable>
           );

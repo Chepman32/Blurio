@@ -4,6 +4,7 @@ import {
   DEFAULT_KEYFRAME_VALUES,
   DEFAULT_SETTINGS,
   KEYFRAME_SNAP_DISTANCE_MS,
+  STRINGS,
 } from '../constants';
 import type {
   ID,
@@ -182,12 +183,18 @@ const persistSettings = (settings: StoredSettings): void => {
 
 const UNASSIGNED_FOLDER_ID = 'folder-unassigned';
 
-const normalizeFolderName = (value: string, fallback = 'Untitled Folder'): string => {
+const normalizeFolderName = (
+  value: string,
+  fallback = STRINGS.common.untitledFolder,
+): string => {
   const next = value.trim();
   return next.length > 0 ? next : fallback;
 };
 
-const normalizeProjectName = (value: string, fallback = 'Untitled Project'): string => {
+const normalizeProjectName = (
+  value: string,
+  fallback = STRINGS.common.untitledProject,
+): string => {
   const next = value.trim();
   return next.length > 0 ? next : fallback;
 };
@@ -1165,8 +1172,8 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
     const timestamp = Date.now();
     const nextTemplate: RegionTemplate = {
       id: createId('template'),
-      name: sanitizeTemplateText(name, `${track.name} Template`),
-      category: sanitizeTemplateText(category, 'General'),
+      name: sanitizeTemplateText(name, STRINGS.naming.templateDefault(track.name)),
+      category: sanitizeTemplateText(category, STRINGS.editor.templateDefaultCategory),
       type: track.type,
       values: buildTemplateValues(interpolatedValues),
       createdAt: timestamp,

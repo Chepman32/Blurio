@@ -13,7 +13,7 @@ import {
 } from 'lucide-react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import type { ID, Track } from '../../../types';
-import { SPACING } from '../../../constants';
+import { SPACING, STRINGS } from '../../../constants';
 import { useAppTheme } from '../../../theme';
 import { AppText } from '../../common/AppText';
 
@@ -38,12 +38,30 @@ export const RegionsPanel: React.FC<RegionsPanelProps> = ({
 }) => {
   const { colors } = useAppTheme();
 
+  const getTrackTypeLabel = (type: Track['type']) => {
+    switch (type) {
+      case 'face':
+        return STRINGS.editor.faceTemplate;
+      case 'plate':
+        return STRINGS.editor.plateTemplate;
+      case 'rectangle':
+        return STRINGS.editor.rectangle;
+      case 'roundedRect':
+        return STRINGS.editor.roundedRect;
+      case 'ellipse':
+        return STRINGS.editor.ellipse;
+      case 'path':
+      default:
+        return STRINGS.editor.path;
+    }
+  };
+
   const renderItem = ({ item, drag, isActive }: RenderItemParams<Track>) => {
     const selected = item.id === selectedTrackId;
 
     const rightActions = () => (
       <TouchableOpacity
-        accessibilityLabel={`Delete ${item.name}`}
+        accessibilityLabel={STRINGS.accessibility.deleteTrack(item.name)}
         onPress={() => onRemoveTrack(item.id)}
         style={[styles.quickAction, { backgroundColor: `${colors.destructive}22` }]}>
         <Trash2 size={16} color={colors.destructive} />
@@ -53,7 +71,7 @@ export const RegionsPanel: React.FC<RegionsPanelProps> = ({
     return (
       <Swipeable renderRightActions={rightActions}>
         <TouchableOpacity
-          accessibilityLabel={`Select ${item.name}`}
+          accessibilityLabel={STRINGS.accessibility.selectTrack(item.name)}
           onPress={() => onSelectTrack(item.id)}
           onLongPress={drag}
           disabled={isActive}
@@ -71,11 +89,11 @@ export const RegionsPanel: React.FC<RegionsPanelProps> = ({
               {item.name}
             </AppText>
             <AppText variant="micro" color={colors.textMuted}>
-              {item.type}
+              {getTrackTypeLabel(item.type)}
             </AppText>
           </View>
           <TouchableOpacity
-            accessibilityLabel={`Toggle visibility ${item.name}`}
+            accessibilityLabel={STRINGS.accessibility.toggleVisibility(item.name)}
             onPress={() => onToggleVisibility(item.id)}
             style={styles.iconButton}>
             {item.visible ? (
@@ -85,7 +103,7 @@ export const RegionsPanel: React.FC<RegionsPanelProps> = ({
             )}
           </TouchableOpacity>
           <TouchableOpacity
-            accessibilityLabel={`Toggle lock ${item.name}`}
+            accessibilityLabel={STRINGS.accessibility.toggleLock(item.name)}
             onPress={() => onToggleLock(item.id)}
             style={styles.iconButton}>
             {item.locked ? (

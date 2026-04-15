@@ -101,7 +101,7 @@ export const SettingsScreen: React.FC = () => {
                 return (
                   <TouchableOpacity
                     key={color}
-                    accessibilityLabel={`Accent color ${color}`}
+                    accessibilityLabel={STRINGS.settings.accentColorOption(color)}
                     onPress={() => setAccentColor(color)}
                     style={[
                       styles.colorSwatch,

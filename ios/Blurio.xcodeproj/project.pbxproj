@@ -15,6 +15,8 @@
 		BF00010120260217000A0001 /* BlurioPreviewViewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF00010120260217000B0001 /* BlurioPreviewViewManager.swift */; };
 		BF00010120260217000A0002 /* BlurioPreviewViewManager.m in Sources */ = {isa = PBXBuildFile; fileRef = BF00010120260217000B0002 /* BlurioPreviewViewManager.m */; };
 		BF00010120260217000A0003 /* BlurioPreviewPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF00010120260217000B0003 /* BlurioPreviewPlayerView.swift */; };
+		BF10000120260415000A0001 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = BF10000120260415000B0001 /* InfoPlist.strings */; };
+		BF10000120260415000A0002 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = BF10000120260415000B0002 /* Localizable.strings */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -31,6 +33,14 @@
 		BF00010120260217000B0002 /* BlurioPreviewViewManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = BlurioPreviewViewManager.m; path = Blurio/BlurioPreviewViewManager.m; sourceTree = "<group>"; };
 		BF00010120260217000B0003 /* BlurioPreviewPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BlurioPreviewPlayerView.swift; path = Blurio/BlurioPreviewPlayerView.swift; sourceTree = "<group>"; };
 		BF00010120260217000B0004 /* Blurio-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Blurio-Bridging-Header.h"; path = "Blurio/Blurio-Bridging-Header.h"; sourceTree = "<group>"; };
+		BF10000120260415000C0001 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Blurio/en.lproj/InfoPlist.strings; sourceTree = SOURCE_ROOT; };
+		BF10000120260415000C0002 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = Blurio/ja.lproj/InfoPlist.strings; sourceTree = SOURCE_ROOT; };
+		BF10000120260415000C0003 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = Blurio/ko.lproj/InfoPlist.strings; sourceTree = SOURCE_ROOT; };
+		BF10000120260415000C0004 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "Blurio/zh-Hans.lproj/InfoPlist.strings"; sourceTree = SOURCE_ROOT; };
+		BF10000120260415000C0005 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Blurio/en.lproj/Localizable.strings; sourceTree = SOURCE_ROOT; };
+		BF10000120260415000C0006 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = Blurio/ja.lproj/Localizable.strings; sourceTree = SOURCE_ROOT; };
+		BF10000120260415000C0007 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = Blurio/ko.lproj/Localizable.strings; sourceTree = SOURCE_ROOT; };
+		BF10000120260415000C0008 /* zh-Hans */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = "zh-Hans"; path = "Blurio/zh-Hans.lproj/Localizable.strings"; sourceTree = SOURCE_ROOT; };
 		ED297162215061F000B7C4FE /* JavaScriptCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = JavaScriptCore.framework; path = System/Library/Frameworks/JavaScriptCore.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
@@ -56,6 +66,8 @@
 				BF00010120260217000B0003 /* BlurioPreviewPlayerView.swift */,
 				BF00010120260217000B0004 /* Blurio-Bridging-Header.h */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
+				BF10000120260415000B0001 /* InfoPlist.strings */,
+				BF10000120260415000B0002 /* Localizable.strings */,
 				81AB9BB72411601600AC10FF /* LaunchScreen.storyboard */,
 				13B07FB81A68108700A75B9A /* PrivacyInfo.xcprivacy */,
 			);
@@ -152,6 +164,9 @@
 			hasScannedForEncodings = 0;
 			knownRegions = (
 				en,
+				ja,
+				ko,
+				"zh-Hans",
 				Base,
 			);
 			mainGroup = 83CBB9F61A601CBA00E9B192;
@@ -171,6 +186,8 @@
 			files = (
 				81AB9BB82411601600AC10FF /* LaunchScreen.storyboard in Resources */,
 				13B07FBF1A68108700A75B9A /* Images.xcassets in Resources */,
+				BF10000120260415000A0001 /* InfoPlist.strings in Resources */,
+				BF10000120260415000A0002 /* Localizable.strings in Resources */,
 				157B3AFD79EB9A2F2378C525 /* PrivacyInfo.xcprivacy in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -202,9 +219,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Blurio/Pods-Blurio-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Blurio/Pods-Blurio-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -241,9 +262,13 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Blurio/Pods-Blurio-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
+			inputPaths = (
+			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Blurio/Pods-Blurio-resources-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -266,6 +291,31 @@
 		};
 /* End PBXSourcesBuildPhase section */
 
+/* Begin PBXVariantGroup section */
+		BF10000120260415000B0001 /* InfoPlist.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				BF10000120260415000C0001 /* en */,
+				BF10000120260415000C0002 /* ja */,
+				BF10000120260415000C0003 /* ko */,
+				BF10000120260415000C0004 /* zh-Hans */,
+			);
+			name = InfoPlist.strings;
+			sourceTree = "<group>";
+		};
+		BF10000120260415000B0002 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				BF10000120260415000C0005 /* en */,
+				BF10000120260415000C0006 /* ja */,
+				BF10000120260415000C0007 /* ko */,
+				BF10000120260415000C0008 /* zh-Hans */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
 /* Begin XCBuildConfiguration section */
 		13B07F941A680F5B00A75B9A /* Debug */ = {
 			isa = XCBuildConfiguration;
@@ -273,7 +323,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = RUYUP6W3YT;
 				ENABLE_BITCODE = NO;
 				INFOPLIST_FILE = Blurio/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
@@ -287,8 +341,10 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.blurio.app;
 				PRODUCT_NAME = Blurio;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = Blurio;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_OBJC_BRIDGING_HEADER = "Blurio/Blurio-Bridging-Header.h";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
@@ -304,7 +360,11 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CLANG_ENABLE_MODULES = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
+				CODE_SIGN_STYLE = Manual;
 				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				"DEVELOPMENT_TEAM[sdk=iphoneos*]" = RUYUP6W3YT;
 				INFOPLIST_FILE = Blurio/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.1;
 				LD_RUNPATH_SEARCH_PATHS = (
@@ -317,8 +377,10 @@
 					"-ObjC",
 					"-lc++",
 				);
-				PRODUCT_BUNDLE_IDENTIFIER = "org.reactjs.native.example.$(PRODUCT_NAME:rfc1034identifier)";
+				PRODUCT_BUNDLE_IDENTIFIER = com.blurio.app;
 				PRODUCT_NAME = Blurio;
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				"PROVISIONING_PROFILE_SPECIFIER[sdk=iphoneos*]" = Blurio;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_OBJC_BRIDGING_HEADER = "Blurio/Blurio-Bridging-Header.h";
 				SWIFT_VERSION = 5.0;

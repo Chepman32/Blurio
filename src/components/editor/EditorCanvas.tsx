@@ -14,6 +14,7 @@ import Animated, {
   withSpring,
 } from 'react-native-reanimated';
 import { BlurioPreviewView } from '../../native';
+import { STRINGS } from '../../constants';
 import type { ID, Project, RenderState, RenderStateTrack } from '../../types';
 import { clamp } from '../../utils';
 import { useAppTheme } from '../../theme';
@@ -624,11 +625,13 @@ export const EditorCanvas: React.FC<EditorCanvasProps> = ({
                 0,
                 Math.max(0, layout.height - height),
               );
+              const trackName =
+                project.tracks.find(candidate => candidate.id === track.id)?.name ?? track.id;
 
               return (
                 <Pressable
                   key={track.id}
-                  accessibilityLabel={`Select ${track.id}`}
+                  accessibilityLabel={STRINGS.accessibility.selectTrack(trackName)}
                   accessibilityRole="button"
                   onPress={() => onSelectTrack(track.id)}
                   style={{

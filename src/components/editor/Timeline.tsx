@@ -212,7 +212,7 @@ const TimelineTrackLane: React.FC<TimelineTrackLaneProps> = ({
       <GestureDetector gesture={leftHandlePan}>
         <View
           accessibilityRole="adjustable"
-          accessibilityLabel={`Adjust start of ${track.name}`}
+          accessibilityLabel={STRINGS.accessibility.adjustTrackStart(track.name)}
           style={[styles.rangeHandleTouch, { left: left - HANDLE_TOUCH_WIDTH / 2 }]}>
           <View style={[styles.rangeHandleBar, { backgroundColor: colors.accent }]} />
         </View>
@@ -221,7 +221,7 @@ const TimelineTrackLane: React.FC<TimelineTrackLaneProps> = ({
       <GestureDetector gesture={rightHandlePan}>
         <View
           accessibilityRole="adjustable"
-          accessibilityLabel={`Adjust end of ${track.name}`}
+          accessibilityLabel={STRINGS.accessibility.adjustTrackEnd(track.name)}
           style={[styles.rangeHandleTouch, { left: right - HANDLE_TOUCH_WIDTH / 2 }]}>
           <View style={[styles.rangeHandleBar, { backgroundColor: colors.accent }]} />
         </View>
@@ -233,7 +233,7 @@ const TimelineTrackLane: React.FC<TimelineTrackLaneProps> = ({
           <Pressable
             key={keyframe.id}
             accessibilityRole="button"
-            accessibilityLabel={`Keyframe ${keyframe.timeMs}`}
+            accessibilityLabel={STRINGS.accessibility.keyframeAt(keyframe.timeMs)}
             onPress={() => onPlayheadChange(keyframe.timeMs, false)}
             onLongPress={() => onMarkerLongPress(track.id, keyframe.id)}
             style={[styles.markerTapArea, { left: markerLeft - 14 }]}>

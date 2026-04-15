@@ -75,7 +75,9 @@ export const BlurioPreviewView: React.FC<BlurioPreviewNativeProps> = ({
       renderState={JSON.stringify(renderState)}
       onReady={onReady}
       onTimeSync={event => onTimeSync?.(event.nativeEvent.timeMs)}
-      onPreviewError={event => onPreviewError?.(event.nativeEvent.message ?? 'Preview error')}
+      onPreviewError={event =>
+        onPreviewError?.(event.nativeEvent.message ?? STRINGS.app.previewError)
+      }
     />
   );
 };

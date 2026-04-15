@@ -4,6 +4,7 @@ import {
   DEFAULT_KEYFRAME_VALUES,
   FOUR_K_HEIGHT,
   FOUR_K_WIDTH,
+  STRINGS,
 } from '../constants';
 import type {
   ID,
@@ -59,7 +60,7 @@ export const createTrack = (
 export const duplicateTrack = (track: Track): Track => ({
   ...track,
   id: createId('track'),
-  name: `${track.name} copy`,
+  name: STRINGS.naming.copySuffix(track.name),
   keyframes: track.keyframes.map(keyframe => ({
     ...keyframe,
     id: createId('kf'),
@@ -80,7 +81,9 @@ export const createProject = (
 
   return {
     id,
-    name: providedName ?? `Project ${new Date(timestamp).toLocaleDateString()}`,
+    name:
+      providedName ??
+      STRINGS.naming.projectDefault(new Date(timestamp).toLocaleDateString()),
     createdAt: timestamp,
     updatedAt: timestamp,
     folderId,
@@ -89,7 +92,7 @@ export const createProject = (
     accentColor,
     video,
     tracks: [
-      createTrack('Region 1', 'roundedRect', accentColor, 1, {
+      createTrack(STRINGS.naming.regionDefault(1), 'roundedRect', accentColor, 1, {
         x: 0.23,
         y: 0.25,
       }),
@@ -103,7 +106,7 @@ export const duplicateProject = (project: Project): Project => {
   return {
     ...project,
     id: createId('project'),
-    name: `${project.name} copy`,
+    name: STRINGS.naming.copySuffix(project.name),
     createdAt: timestamp,
     updatedAt: timestamp,
     trashedAt: null,

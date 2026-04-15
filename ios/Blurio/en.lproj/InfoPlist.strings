@@ -1,0 +1,2 @@
+"NSPhotoLibraryUsageDescription" = "Blurio needs photo library access to import videos for offline blur editing.";
+"NSPhotoLibraryAddUsageDescription" = "Blurio needs permission to save exported videos to your library.";
