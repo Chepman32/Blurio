@@ -167,47 +167,14 @@ const PreviewDevice: React.FC<{ colors: ReturnType<typeof useAppTheme>['colors']
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.previewGradient}>
-      <View style={styles.previewTopRow}>
-        <View style={[styles.previewBadge, { backgroundColor: `${colors.accent}22` }]}>
-          <Shield size={14} color={colors.accent} />
-          <AppText variant="micro" color={colors.accent}>
-            {STRINGS.onboarding.welcomeMetricPrivate}
-          </AppText>
-        </View>
-        <View style={[styles.previewDot, { backgroundColor: colors.success }]} />
-      </View>
-
       <View style={[styles.previewCanvas, { borderColor: `${colors.cardBorder}AA` }]}>
-        <LinearGradient
-          colors={['#111827', '#1F2937', '#0F172A']}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-          style={StyleSheet.absoluteFill}
+        <Image
+          source={require('../assets/restore-extremely-blurry-faces-in-videos.png')}
+          style={styles.previewCanvasImage}
+          resizeMode="cover"
         />
-        <View style={[styles.previewFace, { borderColor: '#7DD3FC' }]} />
-        <View style={[styles.previewPlate, { borderColor: '#FBBF24' }]} />
-        <View style={[styles.previewBadgeFloat, { backgroundColor: `${colors.sheet}CC` }]}>
-          <AppText variant="micro">{STRINGS.onboarding.previewFaceChip}</AppText>
-        </View>
       </View>
 
-      <View style={styles.previewTimeline}>
-        <View style={[styles.timelineBar, { backgroundColor: `${colors.cardBorder}AA` }]}>
-          <View style={[styles.timelineFill, { backgroundColor: colors.accent }]} />
-        </View>
-        <View style={styles.timelineChips}>
-          <View style={[styles.timelineChip, { backgroundColor: `${colors.accent}22` }]}>
-            <AppText variant="micro" color={colors.accent}>
-              {STRINGS.editor.faceTemplate}
-            </AppText>
-          </View>
-          <View style={[styles.timelineChip, { backgroundColor: `${colors.warning}22` }]}>
-            <AppText variant="micro" color={colors.warning}>
-              {STRINGS.editor.plateTemplate}
-            </AppText>
-          </View>
-        </View>
-      </View>
     </LinearGradient>
   </GlassCard>
 );
@@ -486,14 +453,8 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
   const [affirmedStatementIds, setAffirmedStatementIds] = useState<string[]>(
     onboarding.affirmedStatementIds,
   );
-  const [demoSelectionIds, setDemoSelectionIds] = useState<string[]>(
-    onboarding.demoSelectionIds,
-  );
   const [statementCursor, setStatementCursor] = useState(
     Math.min(onboarding.affirmedStatementIds.length, ONBOARDING_STATEMENTS.length - 1),
-  );
-  const [demoCursor, setDemoCursor] = useState(
-    Math.min(onboarding.demoSelectionIds.length, DEMO_TARGETS.length - 1),
   );
 
   const currentStep = ONBOARDING_STEPS[stepIndex] ?? ONBOARDING_STEPS[0];
@@ -513,23 +474,7 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
 
     return Math.floor(availableWidth / 2);
   }, [windowWidth]);
-  const demoTargets = useMemo(
-    () => buildDemoOrder(goalId, preferenceIds),
-    [goalId, preferenceIds],
-  );
   const activeStatement = ONBOARDING_STATEMENTS[statementCursor] ?? null;
-  const activeDemoTarget = demoTargets[demoCursor] ?? null;
-  const resultTargets = useMemo(() => {
-    const chosen = demoSelectionIds
-      .map(id => demoTargets.find(item => item.id === id))
-      .filter((item): item is DemoTarget => Boolean(item));
-
-    if (chosen.length > 0) {
-      return chosen.slice(0, RESULT_SELECTION_COUNT);
-    }
-
-    return demoTargets.slice(0, RESULT_SELECTION_COUNT);
-  }, [demoSelectionIds, demoTargets]);
 
   const stepEntering = reducedMotion
     ? FadeInDown.duration(160)
@@ -553,13 +498,11 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
       painPointIds,
       preferenceIds,
       affirmedStatementIds,
-      demoSelectionIds,
       lastSeenStep: currentStep,
     });
   }, [
     affirmedStatementIds,
     currentStep,
-    demoSelectionIds,
     goalId,
     painPointIds,
     preferenceIds,
@@ -572,29 +515,11 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
     }
 
     const timer = setTimeout(() => {
-      navDirection.current = 'forward';
-      setStepIndex(STEP_INDEX.demo);
+      finishOnboarding();
     }, PROCESSING_DURATION_MS);
 
     return () => clearTimeout(timer);
   }, [currentStep]);
-
-  useEffect(() => {
-    if (currentStep !== 'demo') {
-      return;
-    }
-
-    if (demoSelectionIds.length < RESULT_SELECTION_COUNT && demoCursor < demoTargets.length) {
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      navDirection.current = 'forward';
-      setStepIndex(STEP_INDEX.value);
-    }, 220);
-
-    return () => clearTimeout(timer);
-  }, [currentStep, demoCursor, demoSelectionIds.length, demoTargets.length]);
 
   const goNext = () => {
     if (stepIndex >= TOTAL_STEPS - 1) {
@@ -634,34 +559,7 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
     setStatementCursor(nextCursor);
   };
 
-  const onSelectDemoTarget = (select: boolean) => {
-    if (!activeDemoTarget) {
-      navDirection.current = 'forward';
-      setStepIndex(STEP_INDEX.value);
-      return;
-    }
-
-    if (select) {
-      setDemoSelectionIds(previous => uniq([...previous, activeDemoTarget.id]));
-    }
-
-    setDemoCursor(previous => previous + 1);
-  };
-
-  const shareSetup = async () => {
-    await Share.share({
-      message: STRINGS.onboarding.shareSetupMessage(
-        resultTargets.map(item => item.label),
-      ),
-    });
-  };
-
-  const finishOnboarding = (paywallIntent: 'trial' | 'free') => {
-    // Placeholder until a purchase SDK is connected to the paywall CTA.
-    saveOnboardingProgress({
-      paywallIntent,
-      lastSeenStep: 'paywall',
-    });
+  const finishOnboarding = () => {
     completeOnboarding();
     navigation.reset({
       index: 1,
@@ -996,43 +894,6 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
             </View>
           </Animated.View>
         );
-      case 'permissions':
-        return (
-          <Animated.View
-            key={currentStep}
-            entering={stepEntering}
-            exiting={FadeOut.duration(120)}
-            style={styles.stepBody}>
-            <AppText style={styles.stepTitle}>{STRINGS.onboarding.permissionsTitle}</AppText>
-            <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
-              {STRINGS.onboarding.permissionsLead}
-            </AppText>
-            <GlassCard style={styles.permissionCard}>
-              <View style={[styles.permissionIcon, { backgroundColor: `${colors.accent}22` }]}>
-                <Shield size={28} color={colors.accent} />
-              </View>
-              <View style={styles.permissionBulletList}>
-                <View style={styles.permissionBullet}>
-                  <Check size={16} color={colors.success} />
-                  <AppText variant="bodyStrong">{STRINGS.onboarding.permissionsImport}</AppText>
-                </View>
-                <View style={styles.permissionBullet}>
-                  <Check size={16} color={colors.success} />
-                  <AppText variant="bodyStrong">{STRINGS.onboarding.permissionsExport}</AppText>
-                </View>
-                <View style={styles.permissionBullet}>
-                  <Check size={16} color={colors.success} />
-                  <AppText variant="bodyStrong">
-                    {STRINGS.onboarding.permissionsSystemPrompts}
-                  </AppText>
-                </View>
-              </View>
-              <AppText variant="micro" color={colors.textMuted}>
-                {STRINGS.onboarding.permissionsFooter}
-              </AppText>
-            </GlassCard>
-          </Animated.View>
-        );
       case 'processing':
         return (
           <Animated.View
@@ -1058,182 +919,6 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
                 <Check size={16} color={colors.success} />
                 <AppText variant="bodyStrong">{STRINGS.onboarding.processingDemoQueued}</AppText>
               </View>
-            </GlassCard>
-          </Animated.View>
-        );
-      case 'demo':
-        return (
-          <Animated.View
-            key={currentStep}
-            entering={stepEntering}
-            exiting={FadeOut.duration(120)}
-            style={styles.stepBody}>
-            <AppText style={styles.stepTitle}>{STRINGS.onboarding.demoTitle}</AppText>
-            <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
-              {STRINGS.onboarding.demoLead(RESULT_SELECTION_COUNT)}
-            </AppText>
-            <View style={styles.demoCounterRow}>
-              <AppText variant="micro" color={colors.accent}>
-                {STRINGS.onboarding.demoSelected(
-                  Math.min(demoSelectionIds.length, RESULT_SELECTION_COUNT),
-                  RESULT_SELECTION_COUNT,
-                )}
-              </AppText>
-              <View style={styles.demoCounterChips}>
-                {resultTargets.map(item => (
-                  <Animated.View
-                    key={item.id}
-                    entering={FadeInRight.duration(180)}
-                    layout={LinearTransition.springify().damping(20).stiffness(180)}
-                    style={[styles.demoCounterChip, { backgroundColor: `${item.accent}22` }]}>
-                    <AppText variant="micro" color={item.accent}>
-                      {item.label}
-                    </AppText>
-                  </Animated.View>
-                ))}
-              </View>
-            </View>
-            {activeDemoTarget ? (
-              <Animated.View
-                key={activeDemoTarget.id}
-                entering={
-                  reducedMotion
-                    ? FadeInDown.duration(160)
-                    : FadeInRight.springify()
-                        .damping(SPRINGS.snappy.damping)
-                        .stiffness(SPRINGS.snappy.stiffness)
-                        .mass(SPRINGS.snappy.mass)
-                }
-                exiting={FadeOut.duration(100)}>
-                <DemoSceneCard item={activeDemoTarget} colors={colors} />
-                <GlassCard style={styles.demoDetailCard}>
-                  <AppText variant="bodyStrong">{activeDemoTarget.title}</AppText>
-                  <AppText variant="body" color={colors.textSecondary}>
-                    {activeDemoTarget.detail}
-                  </AppText>
-                </GlassCard>
-              </Animated.View>
-            ) : (
-              <Animated.View key="demo-ready" entering={FadeInDown.duration(160)}>
-                <GlassCard style={styles.demoDetailCard}>
-                  <AppText variant="bodyStrong">{STRINGS.onboarding.demoReadyTitle}</AppText>
-                  <AppText variant="body" color={colors.textSecondary}>
-                    {STRINGS.onboarding.demoReadyBody}
-                  </AppText>
-                </GlassCard>
-              </Animated.View>
-            )}
-          </Animated.View>
-        );
-      case 'value':
-        return (
-          <Animated.View
-            key={currentStep}
-            entering={stepEntering}
-            exiting={FadeOut.duration(120)}
-            style={styles.stepBody}>
-            <AppText style={styles.stepTitle}>{STRINGS.onboarding.valueTitle}</AppText>
-            <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
-              {STRINGS.onboarding.valueLead}
-            </AppText>
-            <GlassCard style={styles.resultCard}>
-              <View style={styles.resultHeader}>
-                <View>
-                  <AppText variant="micro" color={colors.accent}>
-                    {STRINGS.onboarding.valueEyebrow}
-                  </AppText>
-                  <AppText style={styles.resultTitle}>{STRINGS.onboarding.valueCardTitle}</AppText>
-                </View>
-                <Image source={require('../assets/appIcon.png')} style={styles.resultIcon} />
-              </View>
-              <View style={styles.resultList}>
-                {resultTargets.map(item => (
-                  <Animated.View
-                    key={item.id}
-                    entering={FadeInRight.duration(180)}
-                    layout={LinearTransition.springify().damping(20).stiffness(180)}
-                    style={[styles.resultItem, { borderColor: `${colors.cardBorder}AA` }]}>
-                    <View style={[styles.resultItemBadge, { backgroundColor: `${item.accent}22` }]}>
-                      <AppText variant="micro" color={item.accent}>
-                        {item.label}
-                      </AppText>
-                    </View>
-                    <View style={styles.resultItemText}>
-                      <AppText variant="bodyStrong">{item.title}</AppText>
-                      <AppText variant="micro" color={colors.textSecondary}>
-                        {item.subtitle}
-                      </AppText>
-                    </View>
-                  </Animated.View>
-                ))}
-              </View>
-            </GlassCard>
-
-            <View style={styles.metricRow}>
-              <GlassCard style={styles.metricCard}>
-                <AppText variant="bodyStrong">{STRINGS.onboarding.valueMetricOnDeviceTitle}</AppText>
-                <AppText variant="micro" color={colors.textSecondary}>
-                  {STRINGS.onboarding.valueMetricOnDeviceBody}
-                </AppText>
-              </GlassCard>
-              <GlassCard style={styles.metricCard}>
-                <AppText variant="bodyStrong">{STRINGS.onboarding.valueMetricExportTitle}</AppText>
-                <AppText variant="micro" color={colors.textSecondary}>
-                  {STRINGS.onboarding.valueMetricExportBody}
-                </AppText>
-              </GlassCard>
-            </View>
-          </Animated.View>
-        );
-      case 'paywall':
-        return (
-          <Animated.View
-            key={currentStep}
-            entering={stepEntering}
-            exiting={FadeOut.duration(120)}
-            style={styles.stepBody}>
-            <GlassCard style={styles.paywallCard}>
-              <View style={styles.paywallTop}>
-                <Image source={require('../assets/appIcon.png')} style={styles.paywallIcon} />
-                <View style={styles.paywallHeadCopy}>
-                  <AppText variant="micro" color={colors.accent}>
-                    {STRINGS.onboarding.paywallEyebrow}
-                  </AppText>
-                  <AppText style={styles.stepTitle}>{STRINGS.onboarding.paywallTitle}</AppText>
-                </View>
-              </View>
-
-              <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
-                {STRINGS.onboarding.paywallLead}
-              </AppText>
-
-              <View style={styles.paywallPriceWrap}>
-                <AppText style={styles.priceTitle}>{STRINGS.onboarding.paywallTrialTitle}</AppText>
-                <AppText variant="body" color={colors.textSecondary}>
-                  {STRINGS.onboarding.paywallTrialPrice}
-                </AppText>
-              </View>
-
-              <View style={styles.paywallFeatureList}>
-                {PAYWALL_FEATURES.map(item => (
-                  <View key={item} style={styles.paywallFeatureItem}>
-                    <Check size={16} color={colors.success} />
-                    <AppText variant="bodyStrong">{item}</AppText>
-                  </View>
-                ))}
-              </View>
-
-              <GlassCard style={styles.paywallReviewCard}>
-                <View style={styles.starRow}>
-                  {Array.from({ length: 5 }, (_, index) => (
-                    <Star key={`paywall-star-${index}`} size={12} color="#FDBA74" fill="#FDBA74" />
-                  ))}
-                </View>
-                <AppText variant="bodyStrong">{STRINGS.onboarding.paywallReviewTitle}</AppText>
-                <AppText variant="micro" color={colors.textSecondary}>
-                  {STRINGS.onboarding.paywallReviewBody}
-                </AppText>
-              </GlassCard>
             </GlassCard>
           </Animated.View>
         );
@@ -1311,71 +996,8 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
             accessibilityLabel={STRINGS.onboarding.footerPreferences}
           />
         );
-      case 'permissions':
-        return (
-          <BlurButton
-            label={STRINGS.onboarding.footerReady}
-            onPress={goNext}
-            accessibilityLabel={STRINGS.onboarding.footerReady}
-          />
-        );
       case 'processing':
         return null;
-      case 'demo':
-        return activeDemoTarget ? (
-          <View style={styles.dualFooter}>
-            <BlurButton
-              label={STRINGS.onboarding.footerSkipThis}
-              onPress={() => onSelectDemoTarget(false)}
-              accessibilityLabel={STRINGS.onboarding.footerSkipThis}
-              variant="secondary"
-              style={styles.flexButton}
-            />
-            <BlurButton
-              label={STRINGS.onboarding.footerBlurIt}
-              onPress={() => onSelectDemoTarget(true)}
-              accessibilityLabel={STRINGS.onboarding.footerBlurIt}
-              style={styles.flexButton}
-            />
-          </View>
-        ) : null;
-      case 'value':
-        return (
-          <View style={styles.valueFooter}>
-            <BlurButton
-              label={STRINGS.onboarding.footerPlans}
-              onPress={() => {
-                navDirection.current = 'forward';
-                setStepIndex(STEP_INDEX.paywall);
-              }}
-              accessibilityLabel={STRINGS.onboarding.footerPlans}
-            />
-            <BlurButton
-              label={STRINGS.onboarding.footerShare}
-              onPress={() => {
-                shareSetup().catch(() => undefined);
-              }}
-              accessibilityLabel={STRINGS.onboarding.footerShare}
-              variant="secondary"
-            />
-          </View>
-        );
-      case 'paywall':
-        return (
-          <View style={styles.valueFooter}>
-            <BlurButton
-              label={STRINGS.onboarding.footerStartTrial}
-              onPress={() => finishOnboarding('trial')}
-              accessibilityLabel={STRINGS.onboarding.footerStartTrial}
-            />
-            <BlurButton
-              label={STRINGS.onboarding.footerContinueFree}
-              onPress={() => finishOnboarding('free')}
-              accessibilityLabel={STRINGS.onboarding.footerContinueFree}
-              variant="secondary"
-            />
-          </View>
-        );
       default:
         return null;
     }
@@ -1493,79 +1115,17 @@ const styles = StyleSheet.create({
     ...SHADOWS.card,
   },
   previewGradient: {
-    padding: SPACING.md,
-    gap: SPACING.md,
-  },
-  previewTopRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  previewBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: SPACING.xs,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 6,
-    borderRadius: RADIUS.pill,
-  },
-  previewDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    padding: SPACING.sm,
   },
   previewCanvas: {
-    height: 260,
+    height: 200,
     borderRadius: RADIUS.card,
     borderWidth: 1,
     overflow: 'hidden',
-    justifyContent: 'center',
-    alignItems: 'center',
   },
-  previewFace: {
-    width: 92,
-    height: 124,
-    borderRadius: 46,
-    borderWidth: 3,
-  },
-  previewPlate: {
-    position: 'absolute',
-    bottom: 42,
-    width: 110,
-    height: 32,
-    borderRadius: 12,
-    borderWidth: 3,
-  },
-  previewBadgeFloat: {
-    position: 'absolute',
-    top: 24,
-    right: 18,
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 6,
-    borderRadius: RADIUS.pill,
-  },
-  previewTimeline: {
-    gap: SPACING.sm,
-  },
-  timelineBar: {
-    height: 6,
-    borderRadius: RADIUS.pill,
-    overflow: 'hidden',
-  },
-  timelineFill: {
-    width: '58%',
+  previewCanvasImage: {
+    width: '100%',
     height: '100%',
-    borderRadius: RADIUS.pill,
-  },
-  timelineChips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: SPACING.xs,
-  },
-  timelineChip: {
-    paddingHorizontal: SPACING.sm,
-    paddingVertical: 6,
-    borderRadius: RADIUS.pill,
   },
   metricStrip: {
     gap: SPACING.sm,

@@ -9,11 +9,7 @@ export type OnboardingStepKey =
   | 'statements'
   | 'solution'
   | 'preferences'
-  | 'permissions'
-  | 'processing'
-  | 'demo'
-  | 'value'
-  | 'paywall';
+  | 'processing';
 
 export interface OnboardingChoice {
   id: string;
@@ -61,11 +57,7 @@ export const ONBOARDING_STEPS: OnboardingStepKey[] = [
   'statements',
   'solution',
   'preferences',
-  'permissions',
   'processing',
-  'demo',
-  'value',
-  'paywall',
 ];
 
 const GOAL_EMOJIS: Record<string, string> = {
