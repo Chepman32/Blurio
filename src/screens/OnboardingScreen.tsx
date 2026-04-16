@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Image,
   Pressable,
@@ -24,9 +24,18 @@ import {
   X,
 } from 'lucide-react-native';
 import Animated, {
+  Easing,
   FadeInDown,
+  FadeInLeft,
   FadeInRight,
+  FadeOut,
   LinearTransition,
+  useAnimatedStyle,
+  useSharedValue,
+  withDelay,
+  withRepeat,
+  withSpring,
+  withTiming,
 } from 'react-native-reanimated';
 import LinearGradient from 'react-native-linear-gradient';
 import {
@@ -36,6 +45,8 @@ import {
   GradientBackground,
 } from '../components/common';
 import { RADIUS, SHADOWS, SPACING, STRINGS } from '../constants';
+import { SPRINGS } from '../constants/animations';
+import { useReducedMotion } from '../hooks';
 import {
   COMPARISON_ROWS,
   DEFAULT_SOLUTION_ORDER,
@@ -118,20 +129,34 @@ const getGoalCopy = (goalId: string | null): string => {
   return goal?.goalPhrase ?? STRINGS.onboarding.defaultGoalPhrase;
 };
 
-const ProgressBar: React.FC<{ index: number; colors: ReturnType<typeof useAppTheme>['colors'] }> =
-  ({ index, colors }) => (
+const ProgressBar: React.FC<{
+  index: number;
+  colors: ReturnType<typeof useAppTheme>['colors'];
+  reducedMotion: boolean;
+}> = ({ index, colors, reducedMotion }) => {
+  const fillWidth = useSharedValue(((index + 1) / TOTAL_STEPS) * 100);
+
+  useEffect(() => {
+    const target = ((index + 1) / TOTAL_STEPS) * 100;
+    fillWidth.value = reducedMotion
+      ? withTiming(target, { duration: 200 })
+      : withSpring(target, {
+          damping: SPRINGS.gentle.damping,
+          stiffness: SPRINGS.gentle.stiffness,
+          mass: SPRINGS.gentle.mass,
+        });
+  }, [fillWidth, index, reducedMotion]);
+
+  const fillStyle = useAnimatedStyle(() => ({ width: `${fillWidth.value}%` }));
+
+  return (
     <View style={styles.progressTrack}>
-      <View
-        style={[
-          styles.progressFill,
-          {
-            backgroundColor: colors.accent,
-            width: `${((index + 1) / TOTAL_STEPS) * 100}%`,
-          },
-        ]}
+      <Animated.View
+        style={[styles.progressFill, { backgroundColor: colors.accent }, fillStyle]}
       />
     </View>
   );
+};
 
 const PreviewDevice: React.FC<{ colors: ReturnType<typeof useAppTheme>['colors'] }> = ({
   colors,
@@ -192,40 +217,60 @@ const SelectionCard: React.FC<{
   selected: boolean;
   colors: ReturnType<typeof useAppTheme>['colors'];
   onPress: () => void;
-}> = ({ item, selected, colors, onPress }) => (
-  <Pressable onPress={onPress}>
-    <GlassCard
-      style={[
-        styles.selectionCard,
-        {
-          borderColor: selected ? item.accent : colors.cardBorder,
-          backgroundColor: selected ? `${item.accent}22` : colors.card,
-        },
-      ]}>
-      <View style={styles.selectionCardRow}>
-        <View style={[styles.selectionEmojiWrap, { backgroundColor: `${item.accent}22` }]}>
-          <AppText style={styles.selectionEmoji}>{item.emoji}</AppText>
-        </View>
-        <View style={styles.selectionTextWrap}>
-          <AppText variant="bodyStrong">{item.title}</AppText>
-          <AppText variant="micro" color={colors.textSecondary}>
-            {item.body}
-          </AppText>
-        </View>
-        <View
+}> = ({ item, selected, colors, onPress }) => {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  return (
+    <Animated.View style={animStyle}>
+      <Pressable
+        onPressIn={() => {
+          scale.value = withSpring(0.97, {
+            damping: SPRINGS.snappy.damping,
+            stiffness: SPRINGS.snappy.stiffness,
+          });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, {
+            damping: SPRINGS.snappy.damping,
+            stiffness: SPRINGS.snappy.stiffness,
+          });
+        }}
+        onPress={onPress}>
+        <GlassCard
           style={[
-            styles.checkPill,
+            styles.selectionCard,
             {
               borderColor: selected ? item.accent : colors.cardBorder,
-              backgroundColor: selected ? item.accent : 'transparent',
+              backgroundColor: selected ? `${item.accent}22` : colors.card,
             },
           ]}>
-          {selected ? <Check size={14} color="#FFFFFF" /> : null}
-        </View>
-      </View>
-    </GlassCard>
-  </Pressable>
-);
+          <View style={styles.selectionCardRow}>
+            <View style={[styles.selectionEmojiWrap, { backgroundColor: `${item.accent}22` }]}>
+              <AppText style={styles.selectionEmoji}>{item.emoji}</AppText>
+            </View>
+            <View style={styles.selectionTextWrap}>
+              <AppText variant="bodyStrong">{item.title}</AppText>
+              <AppText variant="micro" color={colors.textSecondary}>
+                {item.body}
+              </AppText>
+            </View>
+            <View
+              style={[
+                styles.checkPill,
+                {
+                  borderColor: selected ? item.accent : colors.cardBorder,
+                  backgroundColor: selected ? item.accent : 'transparent',
+                },
+              ]}>
+              {selected ? <Check size={14} color="#FFFFFF" /> : null}
+            </View>
+          </View>
+        </GlassCard>
+      </Pressable>
+    </Animated.View>
+  );
+};
 
 const ComparisonTable: React.FC<{ colors: ReturnType<typeof useAppTheme>['colors'] }> = ({
   colors,
@@ -301,19 +346,127 @@ const DemoSceneCard: React.FC<{
   </GlassCard>
 );
 
-const ProcessingPulse: React.FC<{ colors: ReturnType<typeof useAppTheme>['colors'] }> = ({
-  colors,
-}) => (
-  <View style={styles.processingWrap}>
-    <View style={[styles.processingRingOuter, { borderColor: `${colors.accent}33` }]}>
-      <View style={[styles.processingRingMid, { borderColor: `${colors.accent}66` }]}>
-        <View style={[styles.processingRingInner, { backgroundColor: `${colors.accent}22` }]}>
-          <Sparkles size={28} color={colors.accent} />
-        </View>
-      </View>
+const ProcessingPulse: React.FC<{
+  colors: ReturnType<typeof useAppTheme>['colors'];
+  reducedMotion: boolean;
+}> = ({ colors, reducedMotion }) => {
+  const r1 = useSharedValue(1);
+  const r2 = useSharedValue(1);
+  const r3 = useSharedValue(1);
+
+  useEffect(() => {
+    if (reducedMotion) {
+      return;
+    }
+
+    const cfg = { duration: 1400, easing: Easing.inOut(Easing.sin) };
+    r1.value = withRepeat(withTiming(1.08, cfg), -1, true);
+    r2.value = withDelay(200, withRepeat(withTiming(1.10, cfg), -1, true));
+    r3.value = withDelay(400, withRepeat(withTiming(1.13, cfg), -1, true));
+  }, [r1, r2, r3, reducedMotion]);
+
+  const s1 = useAnimatedStyle(() => ({ transform: [{ scale: r1.value }] }));
+  const s2 = useAnimatedStyle(() => ({ transform: [{ scale: r2.value }] }));
+  const s3 = useAnimatedStyle(() => ({ transform: [{ scale: r3.value }] }));
+
+  return (
+    <View style={styles.processingWrap}>
+      <Animated.View style={[styles.processingRingOuter, { borderColor: `${colors.accent}33` }, s3]}>
+        <Animated.View style={[styles.processingRingMid, { borderColor: `${colors.accent}66` }, s2]}>
+          <Animated.View
+            style={[styles.processingRingInner, { backgroundColor: `${colors.accent}22` }, s1]}>
+            <Sparkles size={28} color={colors.accent} />
+          </Animated.View>
+        </Animated.View>
+      </Animated.View>
     </View>
-  </View>
-);
+  );
+};
+
+const PreferenceCard: React.FC<{
+  item: OnboardingChoice;
+  active: boolean;
+  recommended: boolean;
+  width: number;
+  colors: ReturnType<typeof useAppTheme>['colors'];
+  onPress: () => void;
+}> = ({ item, active, recommended, width, colors, onPress }) => {
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
+
+  return (
+    <Animated.View style={[{ width }, animStyle]}>
+      <Pressable
+        onPressIn={() => {
+          scale.value = withSpring(0.97, {
+            damping: SPRINGS.snappy.damping,
+            stiffness: SPRINGS.snappy.stiffness,
+          });
+        }}
+        onPressOut={() => {
+          scale.value = withSpring(1, {
+            damping: SPRINGS.snappy.damping,
+            stiffness: SPRINGS.snappy.stiffness,
+          });
+        }}
+        onPress={onPress}>
+        <GlassCard
+          style={[
+            styles.preferenceCard,
+            {
+              width,
+              borderColor: active ? item.accent : colors.cardBorder,
+              backgroundColor: active ? `${item.accent}22` : colors.card,
+            },
+          ]}>
+          <View style={styles.preferenceCardHeader}>
+            <View style={[styles.preferenceIconWrap, { backgroundColor: `${item.accent}20` }]}>
+              <AppText style={styles.preferenceEmoji}>{item.emoji}</AppText>
+            </View>
+            <View
+              style={[
+                styles.preferenceSelectPill,
+                {
+                  backgroundColor: active ? item.accent : 'transparent',
+                  borderColor: active ? item.accent : colors.cardBorder,
+                },
+              ]}>
+              {active ? (
+                <Check size={13} color="#FFFFFF" />
+              ) : recommended ? (
+                <Sparkles size={13} color={item.accent} />
+              ) : null}
+            </View>
+          </View>
+          <View style={styles.preferenceTextBlock}>
+            {recommended ? (
+              <AppText variant="micro" color={item.accent}>
+                {STRINGS.onboarding.preferencesRecommended}
+              </AppText>
+            ) : null}
+            <AppText variant="bodyStrong" numberOfLines={2} style={styles.preferenceTitle}>
+              {item.title}
+            </AppText>
+          </View>
+          <AppText
+            variant="micro"
+            color={colors.textSecondary}
+            numberOfLines={4}
+            style={styles.preferenceBody}>
+            {item.body}
+          </AppText>
+          <View style={styles.preferenceFooter}>
+            <AppText variant="micro" color={active ? item.accent : colors.textMuted}>
+              {active
+                ? STRINGS.onboarding.preferencesIncluded
+                : STRINGS.onboarding.preferencesTapToInclude}
+            </AppText>
+          </View>
+        </GlassCard>
+      </Pressable>
+    </Animated.View>
+  );
+};
 
 export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
   const { colors } = useAppTheme();
@@ -322,6 +475,9 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
   const onboarding = useEditorStore(state => state.settings.onboarding);
   const saveOnboardingProgress = useEditorStore(state => state.saveOnboardingProgress);
   const completeOnboarding = useEditorStore(state => state.completeOnboarding);
+  const reducedMotion = useReducedMotion();
+  const navDirection = useRef<'forward' | 'back'>('forward');
+  const scrollRef = useRef<ScrollView>(null);
 
   const [stepIndex, setStepIndex] = useState(() => clampStep(onboarding.lastSeenStep));
   const [goalId, setGoalId] = useState<string | null>(onboarding.goalId);
@@ -375,6 +531,22 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
     return demoTargets.slice(0, RESULT_SELECTION_COUNT);
   }, [demoSelectionIds, demoTargets]);
 
+  const stepEntering = reducedMotion
+    ? FadeInDown.duration(160)
+    : navDirection.current === 'back'
+    ? FadeInLeft.springify()
+        .damping(SPRINGS.snappy.damping)
+        .stiffness(SPRINGS.snappy.stiffness)
+        .mass(SPRINGS.snappy.mass)
+    : FadeInRight.springify()
+        .damping(SPRINGS.snappy.damping)
+        .stiffness(SPRINGS.snappy.stiffness)
+        .mass(SPRINGS.snappy.mass);
+
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ y: 0, animated: false });
+  }, [stepIndex]);
+
   useEffect(() => {
     saveOnboardingProgress({
       goalId,
@@ -400,6 +572,7 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
     }
 
     const timer = setTimeout(() => {
+      navDirection.current = 'forward';
       setStepIndex(STEP_INDEX.demo);
     }, PROCESSING_DURATION_MS);
 
@@ -416,6 +589,7 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
     }
 
     const timer = setTimeout(() => {
+      navDirection.current = 'forward';
       setStepIndex(STEP_INDEX.value);
     }, 220);
 
@@ -427,6 +601,7 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
+    navDirection.current = 'forward';
     setStepIndex(previous => Math.min(previous + 1, TOTAL_STEPS - 1));
   };
 
@@ -435,6 +610,7 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
       return;
     }
 
+    navDirection.current = 'back';
     setStepIndex(previous => Math.max(previous - 1, 0));
   };
 
@@ -450,6 +626,7 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
 
     const nextCursor = statementCursor + 1;
     if (nextCursor >= ONBOARDING_STATEMENTS.length) {
+      navDirection.current = 'forward';
       setStepIndex(STEP_INDEX.solution);
       return;
     }
@@ -459,6 +636,7 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
 
   const onSelectDemoTarget = (select: boolean) => {
     if (!activeDemoTarget) {
+      navDirection.current = 'forward';
       setStepIndex(STEP_INDEX.value);
       return;
     }
@@ -495,7 +673,11 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
     switch (currentStep) {
       case 'welcome':
         return (
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
+          <Animated.View
+            key={currentStep}
+            entering={stepEntering}
+            exiting={FadeOut.duration(120)}
+            style={styles.stepBody}>
             <View style={styles.heroCopy}>
               <View style={[styles.heroBadge, { backgroundColor: `${colors.accent}22` }]}>
                 <Lock size={14} color={colors.accent} />
@@ -531,110 +713,176 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
         );
       case 'goal':
         return (
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
+          <Animated.View
+            key={currentStep}
+            entering={stepEntering}
+            exiting={FadeOut.duration(120)}
+            style={styles.stepBody}>
             <AppText style={styles.stepTitle}>{STRINGS.onboarding.goalTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
               {STRINGS.onboarding.goalLead}
             </AppText>
             <View style={styles.cardList}>
-              {ONBOARDING_GOALS.map(item => (
-                <SelectionCard
+              {ONBOARDING_GOALS.map((item, index) => (
+                <Animated.View
                   key={item.id}
-                  item={item}
-                  selected={goalId === item.id}
-                  colors={colors}
-                  onPress={() => setGoalId(item.id)}
-                />
+                  entering={
+                    reducedMotion
+                      ? undefined
+                      : FadeInDown.delay(index * 55)
+                          .springify()
+                          .damping(SPRINGS.gentle.damping)
+                          .stiffness(SPRINGS.gentle.stiffness)
+                          .mass(SPRINGS.gentle.mass)
+                  }>
+                  <SelectionCard
+                    item={item}
+                    selected={goalId === item.id}
+                    colors={colors}
+                    onPress={() => setGoalId(item.id)}
+                  />
+                </Animated.View>
               ))}
             </View>
           </Animated.View>
         );
       case 'pains':
         return (
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
+          <Animated.View
+            key={currentStep}
+            entering={stepEntering}
+            exiting={FadeOut.duration(120)}
+            style={styles.stepBody}>
             <AppText style={styles.stepTitle}>{STRINGS.onboarding.painsTitle(getGoalCopy(goalId))}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
               {STRINGS.onboarding.painsLead}
             </AppText>
             <View style={styles.cardList}>
-              {ONBOARDING_PAIN_POINTS.map(item => (
-                <SelectionCard
+              {ONBOARDING_PAIN_POINTS.map((item, index) => (
+                <Animated.View
                   key={item.id}
-                  item={item}
-                  selected={painPointIds.includes(item.id)}
-                  colors={colors}
-                  onPress={() => setPainPointIds(previous => toggleId(previous, item.id))}
-                />
+                  entering={
+                    reducedMotion
+                      ? undefined
+                      : FadeInDown.delay(index * 55)
+                          .springify()
+                          .damping(SPRINGS.gentle.damping)
+                          .stiffness(SPRINGS.gentle.stiffness)
+                          .mass(SPRINGS.gentle.mass)
+                  }>
+                  <SelectionCard
+                    item={item}
+                    selected={painPointIds.includes(item.id)}
+                    colors={colors}
+                    onPress={() => setPainPointIds(previous => toggleId(previous, item.id))}
+                  />
+                </Animated.View>
               ))}
             </View>
           </Animated.View>
         );
       case 'proof':
         return (
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
+          <Animated.View
+            key={currentStep}
+            entering={stepEntering}
+            exiting={FadeOut.duration(120)}
+            style={styles.stepBody}>
             <AppText style={styles.stepTitle}>{STRINGS.onboarding.proofTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
               {STRINGS.onboarding.proofLead}
             </AppText>
             <View style={styles.cardList}>
-              {ONBOARDING_TESTIMONIALS.map(item => (
-                <GlassCard key={item.id} style={styles.testimonialCard}>
-                  <View style={styles.testimonialHeader}>
-                    <View style={[styles.personaPill, { backgroundColor: `${colors.accent}22` }]}>
-                      <AppText variant="micro" color={colors.accent}>
-                        {item.persona}
-                      </AppText>
+              {ONBOARDING_TESTIMONIALS.map((item, index) => (
+                <Animated.View
+                  key={item.id}
+                  entering={
+                    reducedMotion
+                      ? undefined
+                      : FadeInDown.delay(index * 55)
+                          .springify()
+                          .damping(SPRINGS.gentle.damping)
+                          .stiffness(SPRINGS.gentle.stiffness)
+                          .mass(SPRINGS.gentle.mass)
+                  }>
+                  <GlassCard style={styles.testimonialCard}>
+                    <View style={styles.testimonialHeader}>
+                      <View style={[styles.personaPill, { backgroundColor: `${colors.accent}22` }]}>
+                        <AppText variant="micro" color={colors.accent}>
+                          {item.persona}
+                        </AppText>
+                      </View>
+                      <View style={styles.starRow}>
+                        {Array.from({ length: 5 }, (_, i) => (
+                          <Star key={`${item.id}-${i}`} size={12} color="#FDBA74" fill="#FDBA74" />
+                        ))}
+                      </View>
                     </View>
-                    <View style={styles.starRow}>
-                      {Array.from({ length: 5 }, (_, index) => (
-                        <Star key={`${item.id}-${index}`} size={12} color="#FDBA74" fill="#FDBA74" />
-                      ))}
-                    </View>
-                  </View>
-                  <AppText variant="bodyStrong">{item.name}</AppText>
-                  <AppText variant="body" color={colors.textSecondary}>
-                    {item.quote}
-                  </AppText>
-                </GlassCard>
+                    <AppText variant="bodyStrong">{item.name}</AppText>
+                    <AppText variant="body" color={colors.textSecondary}>
+                      {item.quote}
+                    </AppText>
+                  </GlassCard>
+                </Animated.View>
               ))}
             </View>
           </Animated.View>
         );
       case 'statements':
         return (
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
+          <Animated.View
+            key={currentStep}
+            entering={stepEntering}
+            exiting={FadeOut.duration(120)}
+            style={styles.stepBody}>
             <AppText style={styles.stepTitle}>{STRINGS.onboarding.statementsTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
               {STRINGS.onboarding.statementsLead}
             </AppText>
-            <GlassCard style={styles.statementCard}>
-              <AppText variant="micro" color={colors.accent}>
-                {STRINGS.onboarding.statementProgress(
-                  Math.min(statementCursor + 1, ONBOARDING_STATEMENTS.length),
-                  ONBOARDING_STATEMENTS.length,
-                )}
-              </AppText>
-              <AppText style={styles.statementQuote}>{activeStatement?.quote}</AppText>
-              <View style={styles.statementDots}>
-                {ONBOARDING_STATEMENTS.map((item, index) => (
-                  <View
-                    key={item.id}
-                    style={[
-                      styles.statementDot,
-                      {
-                        backgroundColor:
-                          index <= statementCursor ? colors.accent : `${colors.cardBorder}AA`,
-                      },
-                    ]}
-                  />
-                ))}
-              </View>
-            </GlassCard>
+            <Animated.View
+              key={activeStatement?.id ?? 'statement-empty'}
+              entering={
+                reducedMotion
+                  ? FadeInDown.duration(160)
+                  : FadeInRight.springify()
+                      .damping(SPRINGS.snappy.damping)
+                      .stiffness(SPRINGS.snappy.stiffness)
+                      .mass(SPRINGS.snappy.mass)
+              }
+              exiting={FadeOut.duration(100)}>
+              <GlassCard style={styles.statementCard}>
+                <AppText variant="micro" color={colors.accent}>
+                  {STRINGS.onboarding.statementProgress(
+                    Math.min(statementCursor + 1, ONBOARDING_STATEMENTS.length),
+                    ONBOARDING_STATEMENTS.length,
+                  )}
+                </AppText>
+                <AppText style={styles.statementQuote}>{activeStatement?.quote}</AppText>
+                <View style={styles.statementDots}>
+                  {ONBOARDING_STATEMENTS.map((item, index) => (
+                    <View
+                      key={item.id}
+                      style={[
+                        styles.statementDot,
+                        {
+                          backgroundColor:
+                            index <= statementCursor ? colors.accent : `${colors.cardBorder}AA`,
+                        },
+                      ]}
+                    />
+                  ))}
+                </View>
+              </GlassCard>
+            </Animated.View>
           </Animated.View>
         );
       case 'solution':
         return (
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
+          <Animated.View
+            key={currentStep}
+            entering={stepEntering}
+            exiting={FadeOut.duration(120)}
+            style={styles.stepBody}>
             <AppText style={styles.stepTitle}>{STRINGS.onboarding.solutionTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
               {STRINGS.onboarding.solutionLead}
@@ -657,7 +905,11 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
         );
       case 'preferences':
         return (
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
+          <Animated.View
+            key={currentStep}
+            entering={stepEntering}
+            exiting={FadeOut.duration(120)}
+            style={styles.stepBody}>
             <AppText style={styles.stepTitle}>{STRINGS.onboarding.preferencesTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
               {STRINGS.onboarding.preferencesLead}
@@ -715,72 +967,30 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
               ) : null}
             </GlassCard>
             <View style={styles.grid}>
-              {ONBOARDING_PREFERENCES.map(item => {
+              {ONBOARDING_PREFERENCES.map((item, index) => {
                 const active = preferenceIds.includes(item.id);
                 const recommended = recommendedPreferenceIds.includes(item.id);
                 return (
-                  <Pressable
+                  <Animated.View
                     key={item.id}
-                    onPress={() => setPreferenceIds(previous => toggleId(previous, item.id))}
-                    style={{ width: preferenceCardWidth }}>
-                    <GlassCard
-                      style={[
-                        styles.preferenceCard,
-                        {
-                          width: preferenceCardWidth,
-                          borderColor: active ? item.accent : colors.cardBorder,
-                          backgroundColor: active ? `${item.accent}22` : colors.card,
-                        },
-                      ]}>
-                      <View style={styles.preferenceCardHeader}>
-                        <View
-                          style={[
-                            styles.preferenceIconWrap,
-                            { backgroundColor: `${item.accent}20` },
-                          ]}>
-                          <AppText style={styles.preferenceEmoji}>{item.emoji}</AppText>
-                        </View>
-                        <View
-                          style={[
-                            styles.preferenceSelectPill,
-                            {
-                              backgroundColor: active ? item.accent : 'transparent',
-                              borderColor: active ? item.accent : colors.cardBorder,
-                            },
-                          ]}>
-                          {active ? (
-                            <Check size={13} color="#FFFFFF" />
-                          ) : recommended ? (
-                            <Sparkles size={13} color={item.accent} />
-                          ) : null}
-                        </View>
-                      </View>
-                      <View style={styles.preferenceTextBlock}>
-                        {recommended ? (
-                          <AppText variant="micro" color={item.accent}>
-                            {STRINGS.onboarding.preferencesRecommended}
-                          </AppText>
-                        ) : null}
-                        <AppText variant="bodyStrong" numberOfLines={2} style={styles.preferenceTitle}>
-                          {item.title}
-                        </AppText>
-                      </View>
-                      <AppText
-                        variant="micro"
-                        color={colors.textSecondary}
-                        numberOfLines={4}
-                        style={styles.preferenceBody}>
-                        {item.body}
-                      </AppText>
-                      <View style={styles.preferenceFooter}>
-                        <AppText variant="micro" color={active ? item.accent : colors.textMuted}>
-                          {active
-                            ? STRINGS.onboarding.preferencesIncluded
-                            : STRINGS.onboarding.preferencesTapToInclude}
-                        </AppText>
-                      </View>
-                    </GlassCard>
-                  </Pressable>
+                    entering={
+                      reducedMotion
+                        ? undefined
+                        : FadeInDown.delay(index * 55)
+                            .springify()
+                            .damping(SPRINGS.gentle.damping)
+                            .stiffness(SPRINGS.gentle.stiffness)
+                            .mass(SPRINGS.gentle.mass)
+                    }>
+                    <PreferenceCard
+                      item={item}
+                      active={active}
+                      recommended={recommended}
+                      width={preferenceCardWidth}
+                      colors={colors}
+                      onPress={() => setPreferenceIds(previous => toggleId(previous, item.id))}
+                    />
+                  </Animated.View>
                 );
               })}
             </View>
@@ -788,7 +998,11 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
         );
       case 'permissions':
         return (
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
+          <Animated.View
+            key={currentStep}
+            entering={stepEntering}
+            exiting={FadeOut.duration(120)}
+            style={styles.stepBody}>
             <AppText style={styles.stepTitle}>{STRINGS.onboarding.permissionsTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
               {STRINGS.onboarding.permissionsLead}
@@ -821,8 +1035,12 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
         );
       case 'processing':
         return (
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.processingStep}>
-            <ProcessingPulse colors={colors} />
+          <Animated.View
+            key={currentStep}
+            entering={stepEntering}
+            exiting={FadeOut.duration(120)}
+            style={styles.processingStep}>
+            <ProcessingPulse colors={colors} reducedMotion={reducedMotion} />
             <AppText style={styles.stepTitle}>{STRINGS.onboarding.processingTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.processingLead}>
               {STRINGS.onboarding.processingLead(getGoalCopy(goalId))}
@@ -845,7 +1063,11 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
         );
       case 'demo':
         return (
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
+          <Animated.View
+            key={currentStep}
+            entering={stepEntering}
+            exiting={FadeOut.duration(120)}
+            style={styles.stepBody}>
             <AppText style={styles.stepTitle}>{STRINGS.onboarding.demoTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
               {STRINGS.onboarding.demoLead(RESULT_SELECTION_COUNT)}
@@ -872,7 +1094,17 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
               </View>
             </View>
             {activeDemoTarget ? (
-              <>
+              <Animated.View
+                key={activeDemoTarget.id}
+                entering={
+                  reducedMotion
+                    ? FadeInDown.duration(160)
+                    : FadeInRight.springify()
+                        .damping(SPRINGS.snappy.damping)
+                        .stiffness(SPRINGS.snappy.stiffness)
+                        .mass(SPRINGS.snappy.mass)
+                }
+                exiting={FadeOut.duration(100)}>
                 <DemoSceneCard item={activeDemoTarget} colors={colors} />
                 <GlassCard style={styles.demoDetailCard}>
                   <AppText variant="bodyStrong">{activeDemoTarget.title}</AppText>
@@ -880,20 +1112,26 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
                     {activeDemoTarget.detail}
                   </AppText>
                 </GlassCard>
-              </>
+              </Animated.View>
             ) : (
-              <GlassCard style={styles.demoDetailCard}>
-                <AppText variant="bodyStrong">{STRINGS.onboarding.demoReadyTitle}</AppText>
-                <AppText variant="body" color={colors.textSecondary}>
-                  {STRINGS.onboarding.demoReadyBody}
-                </AppText>
-              </GlassCard>
+              <Animated.View key="demo-ready" entering={FadeInDown.duration(160)}>
+                <GlassCard style={styles.demoDetailCard}>
+                  <AppText variant="bodyStrong">{STRINGS.onboarding.demoReadyTitle}</AppText>
+                  <AppText variant="body" color={colors.textSecondary}>
+                    {STRINGS.onboarding.demoReadyBody}
+                  </AppText>
+                </GlassCard>
+              </Animated.View>
             )}
           </Animated.View>
         );
       case 'value':
         return (
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
+          <Animated.View
+            key={currentStep}
+            entering={stepEntering}
+            exiting={FadeOut.duration(120)}
+            style={styles.stepBody}>
             <AppText style={styles.stepTitle}>{STRINGS.onboarding.valueTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
               {STRINGS.onboarding.valueLead}
@@ -949,7 +1187,11 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
         );
       case 'paywall':
         return (
-          <Animated.View entering={FadeInDown.duration(220)} style={styles.stepBody}>
+          <Animated.View
+            key={currentStep}
+            entering={stepEntering}
+            exiting={FadeOut.duration(120)}
+            style={styles.stepBody}>
             <GlassCard style={styles.paywallCard}>
               <View style={styles.paywallTop}>
                 <Image source={require('../assets/appIcon.png')} style={styles.paywallIcon} />
@@ -1102,7 +1344,10 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
           <View style={styles.valueFooter}>
             <BlurButton
               label={STRINGS.onboarding.footerPlans}
-              onPress={() => setStepIndex(STEP_INDEX.paywall)}
+              onPress={() => {
+                navDirection.current = 'forward';
+                setStepIndex(STEP_INDEX.paywall);
+              }}
               accessibilityLabel={STRINGS.onboarding.footerPlans}
             />
             <BlurButton
@@ -1162,11 +1407,12 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
             <AppText variant="micro" color={colors.textMuted}>
               {stepIndex + 1} / {TOTAL_STEPS}
             </AppText>
-            <ProgressBar index={stepIndex} colors={colors} />
+            <ProgressBar index={stepIndex} colors={colors} reducedMotion={reducedMotion} />
           </View>
         </View>
 
         <ScrollView
+          ref={scrollRef}
           style={styles.scroll}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}>
