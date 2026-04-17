@@ -1,0 +1,33 @@
+Typpo is a typo checker and forensic typography companion for writers, editors, designers, marketers, developers, students, and anyone who cares how text looks and reads.
+
+Paste or type any text and Typpo finds the issues spellcheck usually ignores: straight quotes, fake ellipses, wrong dash usage, double spaces, inconsistent sentence spacing, widows, orphans, prime-mark mistakes, multiplication-sign mistakes, trademark symbol fallbacks, and even Comic Sans in rich text.
+
+WHY PEOPLE USE TYPPO
+
+• Catch hidden mistakes before you publish, send, or share
+• Get a crime score and clear verdict for every text sample
+• Review every issue with context, explanation, and suggested fix
+• Apply supported fixes, then copy the cleaned text
+• Share polished report cards as images, stories, landscape cards, text, or links
+• Keep a searchable history of past case files
+• Open the Law Library to learn why each issue matters and how to fix it
+• Tune detection rules, scoring strictness, dash style, theme, haptics, sounds, and language
+
+BUILT FOR REAL TEXT WORK
+
+Typpo is useful for social posts, product copy, emails, articles, captions, landing pages, specs, UI strings, brand guidelines, student work, and final proofreading passes. If a paragraph feels almost right but not quite polished, Typpo helps you find out why.
+
+PRIVATE BY DESIGN
+
+All analysis runs on your device. Your reports are stored locally on your iPhone or iPad. No account setup, no copy-paste to a web app, and no need to hand your text to another editor just to spot the small things.
+
+INCLUDED IN THE APP
+
+• Forensic scan flow with live progress
+• Detailed issue breakdown with severity and context
+• Clean-text copy action after supported fixes
+• Report sharing and export tools
+• Saved case history with bulk delete and export
+• Built-in multilingual UI with 30 supported languages
+
+Typpo is not a grammar course or a generic spellchecker. It is a focused typography and proofreading companion built to catch the details that make polished text feel truly finished.

@@ -1,0 +1,1 @@
+typo,proofread,spellcheck,typography,punctuation,editor,quotes,dashes,spacing

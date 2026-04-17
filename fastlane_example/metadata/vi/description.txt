@@ -1,0 +1,33 @@
+Typpo là công cụ kiểm tra lỗi chính tả và kiểu chữ phù hợp dành cho các nhà văn, biên tập viên, nhà thiết kế, nhà tiếp thị, nhà phát triển, sinh viên và bất kỳ ai quan tâm đến hình thức và cách đọc văn bản.
+
+Dán hoặc nhập bất kỳ văn bản nào và Typpo sẽ tìm thấy các vấn đề mà tính năng kiểm tra chính tả thường bỏ qua: dấu ngoặc kép thẳng, dấu chấm lửng giả, sử dụng dấu gạch ngang sai, dấu cách kép, khoảng cách câu không nhất quán, góa phụ, trẻ mồ côi, lỗi dấu nguyên tố, lỗi dấu nhân, ký hiệu nhãn hiệu dự phòng và thậm chí cả Comic Sans ở dạng văn bản đa dạng thức.
+
+TẠI SAO MỌI NGƯỜI SỬ DỤNG TYPPO
+
+• Phát hiện các lỗi tiềm ẩn trước khi bạn xuất bản, gửi hoặc chia sẻ
+• Nhận điểm tội phạm và phán quyết rõ ràng cho từng mẫu văn bản
+• Xem xét mọi vấn đề kèm theo ngữ cảnh, lời giải thích và cách khắc phục được đề xuất
+• Áp dụng các bản sửa lỗi được hỗ trợ, sau đó sao chép văn bản đã được làm sạch
+• Chia sẻ các thẻ báo cáo tinh tế dưới dạng hình ảnh, câu chuyện, thẻ phong cảnh, văn bản hoặc liên kết
+• Lưu giữ lịch sử có thể tìm kiếm của các hồ sơ vụ án trong quá khứ
+• Mở Thư viện Luật để tìm hiểu lý do tại sao mỗi vấn đề lại quan trọng và cách khắc phục
+• Điều chỉnh các quy tắc phát hiện, tính điểm nghiêm ngặt, kiểu gạch ngang, chủ đề, xúc giác, âm thanh và ngôn ngữ
+
+ĐƯỢC XÂY DỰNG CHO CÔNG VIỆC VĂN BẢN THỰC SỰ
+
+Typpo rất hữu ích cho các bài đăng trên mạng xã hội, bản sao sản phẩm, email, bài viết, chú thích, trang đích, thông số kỹ thuật, chuỗi giao diện người dùng, nguyên tắc thương hiệu, bài tập của sinh viên và giấy kiểm tra cuối cùng. Nếu một đoạn văn có vẻ gần đúng nhưng chưa hoàn hảo, Typpo sẽ giúp bạn tìm hiểu lý do.
+
+RIÊNG THEO THIẾT KẾ
+
+Tất cả các phân tích chạy trên thiết bị của bạn. Báo cáo của bạn được lưu trữ cục bộ trên iPhone hoặc iPad. Không cần thiết lập tài khoản, không cần sao chép-dán vào ứng dụng web và không cần chuyển văn bản của bạn cho người chỉnh sửa khác chỉ để phát hiện những điều nhỏ nhặt.
+
+BAO GỒM TRONG ỨNG DỤNG
+
+• Luồng quét pháp y với tiến trình trực tiếp
+• Phân tích vấn đề chi tiết theo mức độ nghiêm trọng và bối cảnh
+• Hành động sao chép văn bản sạch sau khi sửa lỗi được hỗ trợ
+• Công cụ chia sẻ và xuất báo cáo
+• Lịch sử trường hợp đã lưu với tính năng xóa và xuất hàng loạt
+• Giao diện người dùng đa ngôn ngữ tích hợp với 30 ngôn ngữ được hỗ trợ
+
+Typpo không phải là một khóa học ngữ pháp hay một công cụ kiểm tra chính tả chung chung. Nó là một kiểu chữ tập trung và tính năng đồng hành hiệu đính được xây dựng để nắm bắt các chi tiết khiến văn bản bóng bẩy có cảm giác thực sự hoàn thiện.

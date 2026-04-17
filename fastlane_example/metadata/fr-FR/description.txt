@@ -1,0 +1,33 @@
+Typpo est un vérificateur de fautes de frappe et un compagnon de typographie médico-légale destiné aux écrivains, éditeurs, concepteurs, spécialistes du marketing, développeurs, étudiants et à tous ceux qui se soucient de l'apparence et de la lecture du texte.
+
+Collez ou tapez n'importe quel texte et Typpo trouvera les problèmes que la vérification orthographique ignore habituellement : guillemets droits, fausses ellipses, mauvaise utilisation des tirets, espaces doubles, espacement des phrases incohérent, veuves, orphelins, erreurs de marque principale, erreurs de signe de multiplication, solutions de secours de symboles de marque, et même Comic Sans en texte riche.
+
+POURQUOI LES GENS UTILISENT TYPPO
+
+• Détectez les erreurs cachées avant de publier, d'envoyer ou de partager
+• Obtenez un score de crime et un verdict clair pour chaque échantillon de texte
+• Examinez chaque problème avec le contexte, l'explication et la solution suggérée.
+• Appliquez les correctifs pris en charge, puis copiez le texte nettoyé.
+• Partagez des bulletins de notes raffinés sous forme d'images, d'histoires, de fiches de paysage, de texte ou de liens.
+• Conserver un historique consultable des dossiers antérieurs
+• Ouvrez la bibliothèque de droit pour découvrir pourquoi chaque problème est important et comment le résoudre.
+• Ajustez les règles de détection, la rigueur de la notation, le style du tableau de bord, le thème, l'haptique, les sons et la langue.
+
+CONÇU POUR LE TRAVAIL DE TEXTE RÉEL
+
+Typpo est utile pour les publications sur les réseaux sociaux, les copies de produits, les e-mails, les articles, les légendes, les pages de destination, les spécifications, les chaînes d'interface utilisateur, les directives de marque, les travaux des étudiants et les passes de relecture finale. Si un paragraphe semble presque correct mais pas tout à fait soigné, Typpo vous aide à découvrir pourquoi.
+
+PRIVÉ PAR CONCEPTION
+
+Toutes les analyses s'exécutent sur votre appareil. Vos rapports sont stockés localement sur votre iPhone ou iPad. Pas de configuration de compte, pas de copier-coller vers une application Web et pas besoin de confier votre texte à un autre éditeur juste pour repérer les petites choses.
+
+INCLUS DANS L'APPLICATION
+
+• Flux d'analyse médico-légale avec progression en direct
+• Répartition détaillée des problèmes avec gravité et contexte
+• Action de copie de texte propre après les correctifs pris en charge
+• Outils de partage et d'exportation de rapports
+• Historique des cas enregistré avec suppression et exportation groupées
+• Interface utilisateur multilingue intégrée avec 30 langues prises en charge
+
+Typpo n'est pas un cours de grammaire ni un correcteur orthographique générique. Il s'agit d'un compagnon de typographie et de relecture ciblé, conçu pour capturer les détails qui donnent l'impression qu'un texte soigné est vraiment fini.

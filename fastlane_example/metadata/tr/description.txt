@@ -1,0 +1,33 @@
+Typpo, yazarlar, editörler, tasarımcılar, pazarlamacılar, geliştiriciler, öğrenciler ve metnin nasıl göründüğüne ve okunduğuna önem veren herkes için bir yazım hatası denetleyicisi ve adli tipografi yardımcısıdır.
+
+Herhangi bir metni yapıştırdığınızda veya yazdığınızda Typpo, yazım denetiminin genellikle göz ardı ettiği sorunları bulur: düz tırnaklar, sahte elipsler, yanlış tire kullanımı, çift boşluklar, tutarsız cümle aralıkları, dullar, yetimler, asal işaret hataları, çarpma işareti hataları, ticari marka sembolü geri dönüşleri ve hatta zengin metinde Comic Sans.
+
+İNSANLAR NEDEN TYPPO KULLANIYOR
+
+• Gizli hataları yayınlamadan, göndermeden veya paylaşmadan önce yakalayın
+• Her metin örneği için suç puanı ve net karar alın
+• Her sorunu bağlam, açıklama ve önerilen düzeltmeyle birlikte inceleyin
+• Desteklenen düzeltmeleri uygulayın, ardından temizlenen metni kopyalayın
+• Gösterişli karne kartlarını resim, hikaye, manzara kartı, metin veya bağlantı olarak paylaşın
+• Geçmiş vaka dosyalarının aranabilir bir geçmişini tutun
+• Her sorunun neden önemli olduğunu ve nasıl düzeltileceğini öğrenmek için Hukuk Kütüphanesini açın
+• Ayar tespit kuralları, puanlama katılığı, çizgi stili, tema, dokunsal etki, sesler ve dil
+
+GERÇEK METİN ÇALIŞMASI İÇİN ÜRETİLDİ
+
+Typpo, sosyal gönderiler, ürün kopyaları, e-postalar, makaleler, başlıklar, açılış sayfaları, teknik özellikler, kullanıcı arayüzü dizeleri, marka yönergeleri, öğrenci çalışmaları ve son düzeltme geçişleri için kullanışlıdır. Bir paragraf neredeyse doğru gibi görünüyor ancak tam olarak gösterişli değilse, Typpo bunun nedenini bulmanıza yardımcı olur.
+
+TASARIM İLE ÖZEL
+
+Tüm analizler cihazınızda çalışır. Raporlarınız yerel olarak iPhone veya iPad'inizde saklanır. Hesap kurulumu yok, bir web uygulamasına kopyalayıp yapıştırmak yok ve sadece küçük şeyleri tespit etmek için metninizi başka bir düzenleyiciye vermenize gerek yok.
+
+UYGULAMAYA DAHİLDİR
+
+• Canlı ilerlemeyle adli tarama akışı
+• Sorunun ciddiyeti ve bağlamıyla birlikte ayrıntılı dökümü
+• Desteklenen düzeltmelerden sonra metni temizleme eylemi
+• Rapor paylaşımı ve dışa aktarma araçları
+• Toplu silme ve dışa aktarma ile kayıtlı vaka geçmişi
+• Desteklenen 30 dille yerleşik çok dilli kullanıcı arayüzü
+
+Typpo bir dilbilgisi kursu veya genel bir yazım denetleyicisi değildir. Gösterişli metnin gerçekten bitmiş gibi görünmesini sağlayan ayrıntıları yakalamak için tasarlanmış, odaklanmış bir tipografi ve redaksiyon yardımcısıdır.
