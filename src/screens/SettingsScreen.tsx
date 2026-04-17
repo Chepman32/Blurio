@@ -1,15 +1,24 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Circle } from 'lucide-react-native';
+import { Check, ChevronRight, Circle } from 'lucide-react-native';
+import Animated, {
+  FadeInDown,
+  FadeOutUp,
+  useAnimatedStyle,
+  useSharedValue,
+  withSpring,
+} from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ACCENT_COLORS,
+  RADIUS,
   SPACING,
   useStrings,
 } from '../constants';
@@ -74,6 +83,38 @@ const LANGUAGE_LABELS: Record<SupportedLocale, string> = {
   ms: 'Bahasa Melayu',
 };
 
+const FLAG_IMAGES: Record<SupportedLocale, ReturnType<typeof require>> = {
+  en: require('../assets/icons/flags/en.png'),
+  'zh-Hans': require('../assets/icons/flags/zh.png'),
+  ja: require('../assets/icons/flags/ja.png'),
+  ko: require('../assets/icons/flags/ko.png'),
+  de: require('../assets/icons/flags/de.png'),
+  fr: require('../assets/icons/flags/fr.png'),
+  es: require('../assets/icons/flags/es.png'),
+  'pt-BR': require('../assets/icons/flags/pt-BR.png'),
+  ar: require('../assets/icons/flags/ar.png'),
+  ru: require('../assets/icons/flags/ru.png'),
+  it: require('../assets/icons/flags/it.png'),
+  nl: require('../assets/icons/flags/nl.png'),
+  tr: require('../assets/icons/flags/tr.png'),
+  th: require('../assets/icons/flags/th.png'),
+  vi: require('../assets/icons/flags/vi.png'),
+  id: require('../assets/icons/flags/id.png'),
+  pl: require('../assets/icons/flags/pl.png'),
+  uk: require('../assets/icons/flags/uk.png'),
+  hi: require('../assets/icons/flags/hi.png'),
+  he: require('../assets/icons/flags/he.png'),
+  sv: require('../assets/icons/flags/sv.png'),
+  no: require('../assets/icons/flags/no.png'),
+  da: require('../assets/icons/flags/da.png'),
+  fi: require('../assets/icons/flags/fi.png'),
+  cs: require('../assets/icons/flags/cs.png'),
+  hu: require('../assets/icons/flags/hu.png'),
+  ro: require('../assets/icons/flags/ro.png'),
+  el: require('../assets/icons/flags/el.png'),
+  ms: require('../assets/icons/flags/ms.png'),
+};
+
 export const SettingsScreen: React.FC = () => {
   const STRINGS = useStrings();
   const { colors } = useAppTheme();
@@ -104,17 +145,40 @@ export const SettingsScreen: React.FC = () => {
     [projects],
   );
 
+  const [languageExpanded, setLanguageExpanded] = useState(false);
+  const chevronRotation = useSharedValue(0);
   const selectedLanguage = (settings.localeOverride ?? 'system') as LocaleSelection;
-  const languageOptions = useMemo(
-    () => [
-      { label: STRINGS.settings.languageSystem, value: 'system' as const },
-      ...SUPPORTED_LOCALES.map(locale => ({
-        label: LANGUAGE_LABELS[locale],
-        value: locale,
-      })),
-    ],
-    [STRINGS.settings.languageSystem],
+
+  const sortedLocales = useMemo(
+    () => [...SUPPORTED_LOCALES].sort((a, b) =>
+      LANGUAGE_LABELS[a].localeCompare(LANGUAGE_LABELS[b]),
+    ),
+    [],
   );
+
+  const chevronStyle = useAnimatedStyle(() => ({
+    transform: [{ rotate: `${chevronRotation.value}deg` }],
+  }));
+
+  const toggleLanguageAccordion = () => {
+    const next = !languageExpanded;
+    chevronRotation.value = withSpring(next ? 90 : 0, {
+      damping: 14,
+      stiffness: 200,
+      mass: 0.8,
+    });
+    setLanguageExpanded(next);
+  };
+
+  const selectLanguage = (value: LocaleSelection) => {
+    setLocalePreference(value === 'system' ? null : value);
+    chevronRotation.value = withSpring(0, {
+      damping: 14,
+      stiffness: 200,
+      mass: 0.8,
+    });
+    setLanguageExpanded(false);
+  };
 
   return (
     <GradientBackground>
@@ -130,23 +194,91 @@ export const SettingsScreen: React.FC = () => {
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}>
           <GlassCard style={styles.sectionCard}>
-            <AppText variant="section" style={styles.sectionTitle}>
-              {STRINGS.settings.language}
-            </AppText>
-            <SegmentedControl
-              value={selectedLanguage}
-              options={languageOptions}
-              onChange={value =>
-                setLocalePreference(value === 'system' ? null : value)
-              }
-              accessibilityLabel={STRINGS.settings.language}
-              wrap
-            />
-            <AppText variant="micro" color={colors.textMuted}>
-              {selectedLanguage === 'system'
-                ? `${STRINGS.settings.languageSystem}: ${LANGUAGE_LABELS[DEVICE_LOCALE]}`
-                : LANGUAGE_LABELS[selectedLanguage]}
-            </AppText>
+            <TouchableOpacity
+              activeOpacity={0.85}
+              onPress={toggleLanguageAccordion}
+              style={styles.accordionHeader}>
+              <View style={styles.accordionHeaderLeft}>
+                <AppText variant="section" style={styles.sectionTitle}>
+                  {STRINGS.settings.language}
+                </AppText>
+              </View>
+              <View style={styles.accordionHeaderRight}>
+                {selectedLanguage !== 'system' && (
+                  <Image
+                    source={FLAG_IMAGES[selectedLanguage]}
+                    style={styles.flagImageSmall}
+                  />
+                )}
+                <AppText variant="body" color={colors.textSecondary}>
+                  {selectedLanguage === 'system'
+                    ? STRINGS.settings.languageSystem
+                    : LANGUAGE_LABELS[selectedLanguage]}
+                </AppText>
+                <Animated.View style={chevronStyle}>
+                  <ChevronRight size={16} color={colors.textSecondary} />
+                </Animated.View>
+              </View>
+            </TouchableOpacity>
+            {languageExpanded && (
+              <View style={[styles.languageList, { borderColor: colors.cardBorder }]}>
+                <Animated.View
+                  entering={FadeInDown.springify().damping(18).stiffness(200).mass(0.8)}
+                  exiting={FadeOutUp.duration(150)}>
+                  <TouchableOpacity
+                    style={[
+                      styles.languageRow,
+                      selectedLanguage === 'system' && {
+                        backgroundColor: `${colors.accent}22`,
+                      },
+                    ]}
+                    onPress={() => selectLanguage('system')}>
+                    <Image
+                      source={FLAG_IMAGES[DEVICE_LOCALE]}
+                      style={styles.flagImage}
+                    />
+                    <AppText
+                      variant="body"
+                      color={selectedLanguage === 'system' ? colors.accent : colors.textPrimary}
+                      style={styles.languageLabel}>
+                      {STRINGS.settings.languageSystem}
+                    </AppText>
+                    {selectedLanguage === 'system' && (
+                      <Check size={18} color={colors.accent} />
+                    )}
+                  </TouchableOpacity>
+                </Animated.View>
+                {sortedLocales.map((locale, index) => (
+                  <Animated.View
+                    key={locale}
+                    entering={FadeInDown.delay(index * 20).springify().damping(18).stiffness(200).mass(0.8)}
+                    exiting={FadeOutUp.duration(100)}>
+                    <TouchableOpacity
+                      style={[
+                        styles.languageRow,
+                        selectedLanguage === locale && {
+                          backgroundColor: `${colors.accent}22`,
+                        },
+                      ]}
+                      onPress={() => selectLanguage(locale)}>
+                      <Image
+                        source={FLAG_IMAGES[locale]}
+                        style={styles.flagImage}
+                      />
+                      <AppText
+                        variant="body"
+                        color={selectedLanguage === locale ? colors.accent : colors.textPrimary}
+                        style={styles.languageLabel}>
+                        {LANGUAGE_LABELS[locale]}
+                      </AppText>
+                      {selectedLanguage === locale && (
+                        <Check size={18} color={colors.accent} />
+                      )}
+                    </TouchableOpacity>
+                  </Animated.View>
+                ))}
+              </View>
+            )}
           </GlassCard>
 
           <GlassCard style={styles.sectionCard}>
@@ -298,6 +430,7 @@ const styles = StyleSheet.create({
   scrollArea: {
     flex: 1,
     marginTop: SPACING.sm,
+    paddingTop: SPACING.md,
   },
   scrollContent: {
     gap: SPACING.sm,
@@ -325,5 +458,44 @@ const styles = StyleSheet.create({
   },
   cleanTrashButton: {
     marginTop: SPACING.xs,
+  },
+  accordionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  accordionHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  accordionHeaderRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: SPACING.xs,
+  },
+  languageList: {
+    borderTopWidth: 1,
+    paddingTop: SPACING.xs,
+  },
+  languageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: SPACING.sm,
+    paddingHorizontal: SPACING.sm,
+    borderRadius: RADIUS.control,
+    gap: SPACING.sm,
+  },
+  flagImage: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+  },
+  flagImageSmall: {
+    width: 20,
+    height: 20,
+    borderRadius: 3,
+  },
+  languageLabel: {
+    flex: 1,
   },
 });
