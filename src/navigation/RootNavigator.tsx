@@ -12,11 +12,12 @@ import {
   SplashScreen,
 } from '../screens';
 import { useAppTheme } from '../theme';
-import { STRINGS } from '../constants';
+import { useStrings } from '../constants';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const RootNavigator: React.FC = () => {
+  const STRINGS = useStrings();
   const { isDark, colors } = useAppTheme();
 
   return (

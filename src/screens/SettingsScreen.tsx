@@ -11,7 +11,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ACCENT_COLORS,
   SPACING,
-  STRINGS,
+  useStrings,
 } from '../constants';
 import {
   AppText,
@@ -24,6 +24,12 @@ import {
 import { useAppTheme } from '../theme';
 import { useEditorStore, useProjectList } from '../store';
 import { estimateProjectCacheSizeBytes } from '../utils';
+import {
+  DEVICE_LOCALE,
+  SUPPORTED_LOCALES,
+  type LocaleSelection,
+  type SupportedLocale,
+} from '../localization';
 
 const formatBytes = (bytes: number): string => {
   if (bytes <= 0) {
@@ -36,11 +42,45 @@ const formatBytes = (bytes: number): string => {
   return `${value.toFixed(exponent === 0 ? 0 : 1)} ${units[exponent]}`;
 };
 
+const LANGUAGE_LABELS: Record<SupportedLocale, string> = {
+  en: 'English',
+  'zh-Hans': '简体中文',
+  ja: '日本語',
+  ko: '한국어',
+  de: 'Deutsch',
+  fr: 'Français',
+  es: 'Español',
+  'pt-BR': 'Português (Brasil)',
+  ar: 'العربية',
+  ru: 'Русский',
+  it: 'Italiano',
+  nl: 'Nederlands',
+  tr: 'Türkçe',
+  th: 'ไทย',
+  vi: 'Tiếng Việt',
+  id: 'Bahasa Indonesia',
+  pl: 'Polski',
+  uk: 'Українська',
+  hi: 'हिन्दी',
+  he: 'עברית',
+  sv: 'Svenska',
+  no: 'Norsk',
+  da: 'Dansk',
+  fi: 'Suomi',
+  cs: 'Čeština',
+  hu: 'Magyar',
+  ro: 'Română',
+  el: 'Ελληνικά',
+  ms: 'Bahasa Melayu',
+};
+
 export const SettingsScreen: React.FC = () => {
+  const STRINGS = useStrings();
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
 
   const settings = useEditorStore(state => state.settings);
+  const setLocalePreference = useEditorStore(state => state.setLocaleOverride);
   const setAppearance = useEditorStore(state => state.setAppearance);
   const setReduceMotionOverride = useEditorStore(
     state => state.setReduceMotionOverride,
@@ -64,6 +104,18 @@ export const SettingsScreen: React.FC = () => {
     [projects],
   );
 
+  const selectedLanguage = (settings.localeOverride ?? 'system') as LocaleSelection;
+  const languageOptions = useMemo(
+    () => [
+      { label: STRINGS.settings.languageSystem, value: 'system' as const },
+      ...SUPPORTED_LOCALES.map(locale => ({
+        label: LANGUAGE_LABELS[locale],
+        value: locale,
+      })),
+    ],
+    [STRINGS.settings.languageSystem],
+  );
+
   return (
     <GradientBackground>
       <View
@@ -77,6 +129,26 @@ export const SettingsScreen: React.FC = () => {
           style={styles.scrollArea}
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}>
+          <GlassCard style={styles.sectionCard}>
+            <AppText variant="section" style={styles.sectionTitle}>
+              {STRINGS.settings.language}
+            </AppText>
+            <SegmentedControl
+              value={selectedLanguage}
+              options={languageOptions}
+              onChange={value =>
+                setLocalePreference(value === 'system' ? null : value)
+              }
+              accessibilityLabel={STRINGS.settings.language}
+              wrap
+            />
+            <AppText variant="micro" color={colors.textMuted}>
+              {selectedLanguage === 'system'
+                ? `${STRINGS.settings.languageSystem}: ${LANGUAGE_LABELS[DEVICE_LOCALE]}`
+                : LANGUAGE_LABELS[selectedLanguage]}
+            </AppText>
+          </GlassCard>
+
           <GlassCard style={styles.sectionCard}>
             <AppText variant="section" style={styles.sectionTitle}>
               {STRINGS.settings.appearance}

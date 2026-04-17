@@ -44,21 +44,13 @@ import {
   GlassCard,
   GradientBackground,
 } from '../components/common';
-import { RADIUS, SHADOWS, SPACING, STRINGS } from '../constants';
+import { RADIUS, SHADOWS, SPACING, useStrings } from '../constants';
 import { SPRINGS } from '../constants/animations';
 import { useReducedMotion } from '../hooks';
 import {
-  COMPARISON_ROWS,
   DEFAULT_SOLUTION_ORDER,
-  DEMO_TARGETS,
-  ONBOARDING_GOALS,
-  ONBOARDING_PAIN_POINTS,
-  ONBOARDING_PREFERENCES,
-  ONBOARDING_STATEMENTS,
   ONBOARDING_STEPS,
-  ONBOARDING_TESTIMONIALS,
-  PERSONALIZED_SOLUTIONS,
-  PAYWALL_FEATURES,
+  useOnboardingContent,
   type DemoTarget,
   type OnboardingChoice,
   type OnboardingStepKey,
@@ -89,8 +81,6 @@ const GOAL_TO_PREFERENCE: Record<string, string[]> = {
   'ship-faster': ['face', 'plate', 'address'],
 };
 
-const ORDERED_PAIN_IDS = ONBOARDING_PAIN_POINTS.map(item => item.id);
-
 const uniq = (ids: string[]): string[] => Array.from(new Set(ids));
 
 const toggleId = (items: string[], id: string): string[] =>
@@ -105,28 +95,39 @@ const clampStep = (step: string | null): number => {
   return STEP_INDEX[key] ?? 0;
 };
 
-const resolveSolutionItems = (painPointIds: string[]) => {
+const resolveSolutionItems = (
+  personalizedSolutions: Record<string, { id: string; eyebrow: string; headline: string; detail: string }>,
+  painPointIds: string[],
+) => {
   const ids = uniq([...painPointIds, ...DEFAULT_SOLUTION_ORDER]).slice(0, 4);
   return ids
-    .map(id => PERSONALIZED_SOLUTIONS[id])
+    .map(id => personalizedSolutions[id])
     .filter((item): item is NonNullable<typeof item> => Boolean(item));
 };
 
-const buildDemoOrder = (goalId: string | null, preferenceIds: string[]): DemoTarget[] => {
+const buildDemoOrder = (
+  demoTargets: DemoTarget[],
+  goalId: string | null,
+  preferenceIds: string[],
+): DemoTarget[] => {
   const rankedIds = uniq([
     ...preferenceIds,
     ...(goalId ? GOAL_TO_PREFERENCE[goalId] ?? [] : []),
-    ...DEMO_TARGETS.map(item => item.id),
+    ...demoTargets.map(item => item.id),
   ]);
 
   return rankedIds
-    .map(id => DEMO_TARGETS.find(target => target.id === id))
+    .map(id => demoTargets.find(target => target.id === id))
     .filter((item): item is DemoTarget => Boolean(item));
 };
 
-const getGoalCopy = (goalId: string | null): string => {
-  const goal = ONBOARDING_GOALS.find(item => item.id === goalId);
-  return goal?.goalPhrase ?? STRINGS.onboarding.defaultGoalPhrase;
+const getGoalCopy = (
+  strings: ReturnType<typeof useStrings>,
+  onboardingGoals: OnboardingChoice[],
+  goalId: string | null,
+): string => {
+  const goal = onboardingGoals.find(item => item.id === goalId);
+  return goal?.goalPhrase ?? strings.onboarding.defaultGoalPhrase;
 };
 
 const ProgressBar: React.FC<{
@@ -239,27 +240,31 @@ const SelectionCard: React.FC<{
   );
 };
 
-const ComparisonTable: React.FC<{ colors: ReturnType<typeof useAppTheme>['colors'] }> = ({
-  colors,
-}) => (
-  <GlassCard style={styles.comparisonCard}>
-    <AppText variant="bodyStrong" style={styles.comparisonTitle}>
-      {STRINGS.onboarding.comparisonTitle}
-    </AppText>
-    <View style={styles.comparisonHeader}>
-      <AppText variant="micro" color={colors.textMuted}>
-        {STRINGS.onboarding.comparisonWhatMatters}
+const ComparisonTable: React.FC<{
+  colors: ReturnType<typeof useAppTheme>['colors'];
+  rows: Array<{ id: string; label: string; withApp: string; withoutApp: string }>;
+}> = ({ colors, rows }) => {
+  const STRINGS = useStrings();
+
+  return (
+    <GlassCard style={styles.comparisonCard}>
+      <AppText variant="bodyStrong" style={styles.comparisonTitle}>
+        {STRINGS.onboarding.comparisonTitle}
       </AppText>
-      <View style={styles.comparisonHeaderRight}>
-        <AppText variant="micro" color={colors.accent}>
-          {STRINGS.onboarding.comparisonWithApp}
-        </AppText>
+      <View style={styles.comparisonHeader}>
         <AppText variant="micro" color={colors.textMuted}>
-          {STRINGS.onboarding.comparisonWithout}
+          {STRINGS.onboarding.comparisonWhatMatters}
         </AppText>
+        <View style={styles.comparisonHeaderRight}>
+          <AppText variant="micro" color={colors.accent}>
+            {STRINGS.onboarding.comparisonWithApp}
+          </AppText>
+          <AppText variant="micro" color={colors.textMuted}>
+            {STRINGS.onboarding.comparisonWithout}
+          </AppText>
+        </View>
       </View>
-    </View>
-    {COMPARISON_ROWS.map(row => (
+      {rows.map(row => (
       <View
         key={row.id}
         style={[styles.comparisonRow, { borderTopColor: `${colors.cardBorder}AA` }]}>
@@ -279,11 +284,12 @@ const ComparisonTable: React.FC<{ colors: ReturnType<typeof useAppTheme>['colors
               {row.withoutApp}
             </AppText>
           </View>
+          </View>
         </View>
-      </View>
-    ))}
-  </GlassCard>
-);
+      ))}
+    </GlassCard>
+  );
+};
 
 const DemoSceneCard: React.FC<{
   item: DemoTarget;
@@ -358,6 +364,7 @@ const PreferenceCard: React.FC<{
   colors: ReturnType<typeof useAppTheme>['colors'];
   onPress: () => void;
 }> = ({ item, active, recommended, width, colors, onPress }) => {
+  const STRINGS = useStrings();
   const scale = useSharedValue(1);
   const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
 
@@ -436,10 +443,26 @@ const PreferenceCard: React.FC<{
 };
 
 export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
+  const STRINGS = useStrings();
+  const {
+    onboardingGoals: ONBOARDING_GOALS,
+    onboardingPainPoints: ONBOARDING_PAIN_POINTS,
+    onboardingTestimonials: ONBOARDING_TESTIMONIALS,
+    onboardingStatements: ONBOARDING_STATEMENTS,
+    onboardingPreferences: ONBOARDING_PREFERENCES,
+    personalizedSolutions: PERSONALIZED_SOLUTIONS,
+    demoTargets: DEMO_TARGETS,
+    paywallFeatures: PAYWALL_FEATURES,
+    comparisonRows: COMPARISON_ROWS,
+  } = useOnboardingContent();
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
   const { width: windowWidth } = useWindowDimensions();
   const onboarding = useEditorStore(state => state.settings.onboarding);
+  const ORDERED_PAIN_IDS = useMemo(
+    () => ONBOARDING_PAIN_POINTS.map(item => item.id),
+    [ONBOARDING_PAIN_POINTS],
+  );
   const saveOnboardingProgress = useEditorStore(state => state.saveOnboardingProgress);
   const completeOnboarding = useEditorStore(state => state.completeOnboarding);
   const reducedMotion = useReducedMotion();
@@ -462,7 +485,10 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
     () => ORDERED_PAIN_IDS.filter(id => painPointIds.includes(id)),
     [painPointIds],
   );
-  const solutionItems = useMemo(() => resolveSolutionItems(selectedPains), [selectedPains]);
+  const solutionItems = useMemo(
+    () => resolveSolutionItems(PERSONALIZED_SOLUTIONS, selectedPains),
+    [PERSONALIZED_SOLUTIONS, selectedPains],
+  );
   const recommendedPreferenceIds = useMemo(
     () => (goalId ? GOAL_TO_PREFERENCE[goalId] ?? [] : []),
     [goalId],
@@ -651,7 +677,9 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
             entering={stepEntering}
             exiting={FadeOut.duration(120)}
             style={styles.stepBody}>
-            <AppText style={styles.stepTitle}>{STRINGS.onboarding.painsTitle(getGoalCopy(goalId))}</AppText>
+            <AppText style={styles.stepTitle}>
+              {STRINGS.onboarding.painsTitle(getGoalCopy(STRINGS, ONBOARDING_GOALS, goalId))}
+            </AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.stepLead}>
               {STRINGS.onboarding.painsLead}
             </AppText>
@@ -798,7 +826,7 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
                 </GlassCard>
               ))}
             </View>
-            <ComparisonTable colors={colors} />
+            <ComparisonTable colors={colors} rows={COMPARISON_ROWS} />
           </Animated.View>
         );
       case 'preferences':
@@ -904,7 +932,7 @@ export const OnboardingScreen: React.FC<Props> = ({ navigation }) => {
             <ProcessingPulse colors={colors} reducedMotion={reducedMotion} />
             <AppText style={styles.stepTitle}>{STRINGS.onboarding.processingTitle}</AppText>
             <AppText variant="body" color={colors.textSecondary} style={styles.processingLead}>
-              {STRINGS.onboarding.processingLead(getGoalCopy(goalId))}
+              {STRINGS.onboarding.processingLead(getGoalCopy(STRINGS, ONBOARDING_GOALS, goalId))}
             </AppText>
             <GlassCard style={styles.processingCard}>
               <View style={styles.processingChecklistItem}>

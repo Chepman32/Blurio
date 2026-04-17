@@ -1,3 +1,4 @@
+import { useSyncExternalStore } from 'react';
 import { getLocales } from 'react-native-localize';
 
 export const SUPPORTED_LOCALES = [
@@ -33,8 +34,12 @@ export const SUPPORTED_LOCALES = [
 ] as const;
 
 export type SupportedLocale = (typeof SUPPORTED_LOCALES)[number];
+export type LocaleSelection = SupportedLocale | 'system';
 
 const RTL_LANGUAGES = new Set(['ar', 'he']);
+type LocaleListener = () => void;
+const localeListeners = new Set<LocaleListener>();
+let localeOverride: SupportedLocale | null = null;
 
 const normalizeLocale = (locale: string | null | undefined): string =>
   (locale ?? '').trim().replace(/_/g, '-');
@@ -84,9 +89,48 @@ const resolvePreferredLocale = (): SupportedLocale => {
   return 'en';
 };
 
-export const APP_LOCALE = resolvePreferredLocale();
-export const APP_LANGUAGE = APP_LOCALE.split('-')[0] ?? 'en';
-export const IS_RTL_LOCALE = RTL_LANGUAGES.has(APP_LANGUAGE);
+export const DEVICE_LOCALE = resolvePreferredLocale();
+
+const emitLocaleChange = (): void => {
+  localeListeners.forEach(listener => listener());
+};
+
+export const subscribeToLocale = (listener: LocaleListener): (() => void) => {
+  localeListeners.add(listener);
+  return () => localeListeners.delete(listener);
+};
+
+export const getLocaleOverride = (): SupportedLocale | null => localeOverride;
+
+export const getActiveLocale = (): SupportedLocale => localeOverride ?? DEVICE_LOCALE;
+
+export const setLocaleOverride = (locale: SupportedLocale | null): void => {
+  if (localeOverride === locale) {
+    return;
+  }
+
+  localeOverride = locale;
+  emitLocaleChange();
+};
+
+export const sanitizeLocaleOverride = (
+  locale: string | null | undefined,
+): SupportedLocale | null => {
+  const normalized = normalizeLocale(locale);
+  if (!normalized) {
+    return null;
+  }
+
+  const matched = matchSupportedLocale(normalized);
+  return SUPPORTED_LOCALES.includes(matched) ? matched : null;
+};
+
+export const useActiveLocale = (): SupportedLocale =>
+  useSyncExternalStore(subscribeToLocale, getActiveLocale, getActiveLocale);
+
+export const APP_LOCALE = DEVICE_LOCALE;
+export const APP_LANGUAGE = getActiveLocale().split('-')[0] ?? 'en';
+export const IS_RTL_LOCALE = RTL_LANGUAGES.has(getActiveLocale().split('-')[0] ?? 'en');
 
 export const formatList = (items: string[]): string => {
   if (items.length === 0) {

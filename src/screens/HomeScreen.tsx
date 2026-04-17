@@ -51,7 +51,7 @@ import {
   GradientBackground,
 } from '../components/common';
 import { ProjectCard } from '../components/home';
-import { SPACING, STRINGS } from '../constants';
+import { SPACING, useStrings } from '../constants';
 import { useAppTheme } from '../theme';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
@@ -66,6 +66,7 @@ interface HomeSection {
 }
 
 export const HomeScreen: React.FC<Props> = ({ navigation }) => {
+  const STRINGS = useStrings();
   const { colors, isDark } = useAppTheme();
   const insets = useSafeAreaInsets();
   const folders = useFolderList();

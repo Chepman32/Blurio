@@ -1,4 +1,4 @@
-import { STRINGS } from '../constants';
+import { useStrings } from '../constants';
 import type { RegionType } from '../types';
 
 export type OnboardingStepKey =
@@ -78,12 +78,6 @@ const GOAL_ACCENTS: Record<string, string> = {
   'ship-faster': '#F25F5C',
 };
 
-export const ONBOARDING_GOALS: OnboardingChoice[] = STRINGS.onboardingContent.goals.map(item => ({
-  ...item,
-  emoji: GOAL_EMOJIS[item.id] ?? '✨',
-  accent: GOAL_ACCENTS[item.id] ?? '#56CFE1',
-}));
-
 const PAIN_EMOJIS: Record<string, string> = {
   'cloud-risk': '☁️',
   'too-slow': '⏱️',
@@ -102,19 +96,6 @@ const PAIN_ACCENTS: Record<string, string> = {
   'mobile-workflow': '#50C878',
 };
 
-export const ONBOARDING_PAIN_POINTS: OnboardingChoice[] = STRINGS.onboardingContent.pains.map(
-  item => ({
-    ...item,
-    emoji: PAIN_EMOJIS[item.id] ?? '✨',
-    accent: PAIN_ACCENTS[item.id] ?? '#56CFE1',
-  }),
-);
-
-export const ONBOARDING_TESTIMONIALS: OnboardingTestimonial[] =
-  STRINGS.onboardingContent.testimonials;
-
-export const ONBOARDING_STATEMENTS: OnboardingStatement[] = STRINGS.onboardingContent.statements;
-
 const PREFERENCE_EMOJIS: Record<string, string> = {
   face: '🙂',
   plate: '🚘',
@@ -132,16 +113,6 @@ const PREFERENCE_ACCENTS: Record<string, string> = {
   document: '#A78BFA',
   tattoo: '#F25F5C',
 };
-
-export const ONBOARDING_PREFERENCES: OnboardingChoice[] =
-  STRINGS.onboardingContent.preferences.map(item => ({
-    ...item,
-    emoji: PREFERENCE_EMOJIS[item.id] ?? '✨',
-    accent: PREFERENCE_ACCENTS[item.id] ?? '#56CFE1',
-  }));
-
-export const PERSONALIZED_SOLUTIONS: Record<string, PersonalizedSolutionItem> =
-  STRINGS.onboardingContent.solutions;
 
 export const DEFAULT_SOLUTION_ORDER = [
   'cloud-risk',
@@ -168,12 +139,43 @@ const DEMO_REGION_TYPES: Record<string, RegionType> = {
   tattoo: 'ellipse',
 };
 
-export const DEMO_TARGETS: DemoTarget[] = STRINGS.onboardingContent.demoTargets.map(item => ({
-  ...item,
-  accent: DEMO_ACCENTS[item.id] ?? '#56CFE1',
-  regionType: DEMO_REGION_TYPES[item.id] ?? 'rectangle',
-}));
+export const useOnboardingContent = () => {
+  const STRINGS = useStrings();
 
-export const PAYWALL_FEATURES = STRINGS.onboardingContent.paywallFeatures;
+  const onboardingGoals: OnboardingChoice[] = STRINGS.onboardingContent.goals.map(item => ({
+    ...item,
+    emoji: GOAL_EMOJIS[item.id] ?? '✨',
+    accent: GOAL_ACCENTS[item.id] ?? '#56CFE1',
+  }));
 
-export const COMPARISON_ROWS = STRINGS.onboardingContent.comparisonRows;
+  const onboardingPainPoints: OnboardingChoice[] = STRINGS.onboardingContent.pains.map(item => ({
+    ...item,
+    emoji: PAIN_EMOJIS[item.id] ?? '✨',
+    accent: PAIN_ACCENTS[item.id] ?? '#56CFE1',
+  }));
+
+  const onboardingPreferences: OnboardingChoice[] =
+    STRINGS.onboardingContent.preferences.map(item => ({
+      ...item,
+      emoji: PREFERENCE_EMOJIS[item.id] ?? '✨',
+      accent: PREFERENCE_ACCENTS[item.id] ?? '#56CFE1',
+    }));
+
+  const demoTargets: DemoTarget[] = STRINGS.onboardingContent.demoTargets.map(item => ({
+    ...item,
+    accent: DEMO_ACCENTS[item.id] ?? '#56CFE1',
+    regionType: DEMO_REGION_TYPES[item.id] ?? 'rectangle',
+  }));
+
+  return {
+    onboardingGoals,
+    onboardingPainPoints,
+    onboardingTestimonials: STRINGS.onboardingContent.testimonials,
+    onboardingStatements: STRINGS.onboardingContent.statements,
+    onboardingPreferences,
+    personalizedSolutions: STRINGS.onboardingContent.solutions,
+    demoTargets,
+    paywallFeatures: STRINGS.onboardingContent.paywallFeatures,
+    comparisonRows: STRINGS.onboardingContent.comparisonRows,
+  };
+};

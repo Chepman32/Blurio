@@ -203,6 +203,7 @@ export interface StoredOnboardingState {
 }
 
 export interface StoredSettings {
+  localeOverride: string | null;
   appearance: 'system' | 'dark' | 'light';
   reduceMotionOverride: 'system' | 'on' | 'off';
   accentColor: string;

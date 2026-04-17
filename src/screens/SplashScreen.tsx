@@ -17,7 +17,7 @@ import Animated, {
 import { GradientBackground, AppText } from '../components/common';
 import { useEditorStore } from '../store';
 import type { RootStackParamList } from '../types';
-import { SPACING, STRINGS } from '../constants';
+import { SPACING, useStrings } from '../constants';
 import { useAppTheme } from '../theme';
 import { useHaptics, useReducedMotion } from '../hooks';
 
@@ -126,6 +126,7 @@ const SplashShard: React.FC<{
 };
 
 export const SplashScreen: React.FC<Props> = ({ navigation }) => {
+  const STRINGS = useStrings();
   const { colors } = useAppTheme();
   const { impact } = useHaptics();
   const reduceMotion = useReducedMotion();

@@ -59,6 +59,7 @@ export const PREVIEW_QUALITY_ORDER: PreviewQuality[] = [
 ];
 
 export const DEFAULT_SETTINGS: StoredSettings = {
+  localeOverride: null,
   appearance: 'system',
   reduceMotionOverride: 'system',
   accentColor: ACCENT_COLORS[0],

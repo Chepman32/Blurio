@@ -6,6 +6,11 @@ import {
   KEYFRAME_SNAP_DISTANCE_MS,
   STRINGS,
 } from '../constants';
+import {
+  sanitizeLocaleOverride,
+  setLocaleOverride as applyLocaleOverride,
+  type SupportedLocale,
+} from '../localization';
 import type {
   ID,
   InterpolationType,
@@ -119,6 +124,7 @@ interface BlurioStore {
   setUnsupportedVideoPromptVisible: (visible: boolean) => void;
   setSharedTransition: (payload: SharedTransitionState | null) => void;
   setAppearance: (appearance: StoredSettings['appearance']) => void;
+  setLocaleOverride: (locale: SupportedLocale | null) => void;
   setReduceMotionOverride: (
     value: StoredSettings['reduceMotionOverride'],
   ) => void;
@@ -565,8 +571,17 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
     const normalizedProjects = sanitizeProjects(loadedProjects, folders);
     const projects = normalizedProjects.projects;
     const settings = loadSettings();
+    const locale = sanitizeLocaleOverride(settings.localeOverride);
+    const localeChanged = locale !== settings.localeOverride;
+    if (locale !== settings.localeOverride) {
+      settings.localeOverride = locale;
+    }
+    applyLocaleOverride(locale);
     if (normalizedProjects.changed) {
       persistProjects(projects);
+    }
+    if (localeChanged) {
+      persistSettings(settings);
     }
 
     const ids = getSortedProjectIds(projects);
@@ -1932,6 +1947,23 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
     };
 
     persistSettings(settings);
+    set({ settings });
+  },
+
+  setLocaleOverride: locale => {
+    const state = get();
+    const nextLocale = sanitizeLocaleOverride(locale);
+    if (state.settings.localeOverride === nextLocale) {
+      return;
+    }
+
+    const settings = {
+      ...state.settings,
+      localeOverride: nextLocale,
+    };
+
+    persistSettings(settings);
+    applyLocaleOverride(nextLocale);
     set({ settings });
   },
 

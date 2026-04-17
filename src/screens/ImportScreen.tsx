@@ -11,7 +11,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { launchImageLibrary } from 'react-native-image-picker';
 import { BlurButton, GradientBackground, ShimmerOverlay, AppText } from '../components/common';
-import { SPACING, STRINGS } from '../constants';
+import { SPACING, useStrings } from '../constants';
 import type { RootStackParamList, VideoMeta } from '../types';
 import { useEditorStore } from '../store';
 import {
@@ -25,6 +25,7 @@ import { useAppTheme } from '../theme';
 type Props = NativeStackScreenProps<RootStackParamList, 'Import'>;
 
 export const ImportScreen: React.FC<Props> = ({ navigation }) => {
+  const STRINGS = useStrings();
   const { colors } = useAppTheme();
   const headerHeight = useHeaderHeight();
   const createProjectFromVideo = useEditorStore(state => state.createProjectFromVideo);

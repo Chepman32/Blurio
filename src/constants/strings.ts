@@ -1,4 +1,9 @@
-import { APP_LOCALE, formatList, type SupportedLocale } from '../localization';
+import {
+  formatList,
+  getActiveLocale,
+  useActiveLocale,
+  type SupportedLocale,
+} from '../localization';
 
 type TranslationDict = Record<string, string>;
 
@@ -197,6 +202,8 @@ settings.preview=Preview
 settings.export=Export
 settings.storage=Storage
 settings.about=About
+settings.language=Language
+settings.languageSystem=System
 settings.appearanceSystem=Match iOS
 settings.appearanceDark=Dark
 settings.appearanceLight=Light
@@ -533,6 +540,8 @@ settings.preview=预览
 settings.export=导出
 settings.storage=存储
 settings.about=关于
+settings.language=语言
+settings.languageSystem=跟随系统
 settings.appearanceSystem=跟随 iOS
 settings.appearanceDark=深色
 settings.appearanceLight=浅色
@@ -948,6 +957,8 @@ settings.preview=プレビュー
 settings.export=書き出し
 settings.storage=ストレージ
 settings.about=このアプリについて
+settings.language=言語
+settings.languageSystem=システム
 settings.appearanceSystem=iOSに合わせる
 settings.appearanceDark=ダーク
 settings.appearanceLight=ライト
@@ -1342,6 +1353,8 @@ settings.preview=미리보기
 settings.export=내보내기
 settings.storage=저장 공간
 settings.about=정보
+settings.language=언어
+settings.languageSystem=시스템
 settings.appearanceSystem=iOS에 맞추기
 settings.appearanceDark=다크
 settings.appearanceLight=라이트
@@ -1855,6 +1868,8 @@ settings.preview=Vorschau
 settings.export=Export
 settings.storage=Speicher
 settings.about=Info
+settings.language=Sprache
+settings.languageSystem=System
 settings.appearanceSystem=An iOS anpassen
 settings.appearanceDark=Dunkel
 settings.appearanceLight=Hell
@@ -2269,6 +2284,8 @@ settings.preview=Aperçu
 settings.export=Export
 settings.storage=Stockage
 settings.about=À propos
+settings.language=Langue
+settings.languageSystem=Système
 settings.appearanceSystem=Suivre iOS
 settings.appearanceDark=Sombre
 settings.appearanceLight=Clair
@@ -2683,6 +2700,8 @@ settings.preview=Vista previa
 settings.export=Exportación
 settings.storage=Almacenamiento
 settings.about=Información
+settings.language=Idioma
+settings.languageSystem=Sistema
 settings.appearanceSystem=Seguir iOS
 settings.appearanceDark=Oscuro
 settings.appearanceLight=Claro
@@ -3097,6 +3116,8 @@ settings.preview=Prévia
 settings.export=Exportação
 settings.storage=Armazenamento
 settings.about=Sobre
+settings.language=Idioma
+settings.languageSystem=Sistema
 settings.appearanceSystem=Seguir o iOS
 settings.appearanceDark=Escuro
 settings.appearanceLight=Claro
@@ -3511,6 +3532,8 @@ settings.preview=Anteprima
 settings.export=Esportazione
 settings.storage=Archiviazione
 settings.about=Info
+settings.language=Lingua
+settings.languageSystem=Sistema
 settings.appearanceSystem=Segui iOS
 settings.appearanceDark=Scuro
 settings.appearanceLight=Chiaro
@@ -3925,6 +3948,8 @@ settings.preview=Preview
 settings.export=Export
 settings.storage=Opslag
 settings.about=Over
+settings.language=Taal
+settings.languageSystem=Systeem
 settings.appearanceSystem=Volg iOS
 settings.appearanceDark=Donker
 settings.appearanceLight=Licht
@@ -4339,6 +4364,8 @@ settings.preview=Förhandsvisning
 settings.export=Export
 settings.storage=Lagring
 settings.about=Om
+settings.language=Språk
+settings.languageSystem=System
 settings.appearanceSystem=Följ iOS
 settings.appearanceDark=Mörk
 settings.appearanceLight=Ljus
@@ -4753,6 +4780,8 @@ settings.preview=Forhåndsvisning
 settings.export=Eksport
 settings.storage=Lagring
 settings.about=Om
+settings.language=Språk
+settings.languageSystem=System
 settings.appearanceSystem=Følg iOS
 settings.appearanceDark=Mørk
 settings.appearanceLight=Lys
@@ -5167,6 +5196,8 @@ settings.preview=Forhåndsvisning
 settings.export=Eksport
 settings.storage=Lagring
 settings.about=Om
+settings.language=Sprog
+settings.languageSystem=System
 settings.appearanceSystem=Følg iOS
 settings.appearanceDark=Mørk
 settings.appearanceLight=Lys
@@ -5581,6 +5612,8 @@ settings.preview=Esikatselu
 settings.export=Vienti
 settings.storage=Tallennustila
 settings.about=Tietoja
+settings.language=Kieli
+settings.languageSystem=Järjestelmä
 settings.appearanceSystem=Seuraa iOS:ää
 settings.appearanceDark=Tumma
 settings.appearanceLight=Vaalea
@@ -5995,6 +6028,8 @@ settings.preview=Podgląd
 settings.export=Eksport
 settings.storage=Pamięć
 settings.about=O aplikacji
+settings.language=Język
+settings.languageSystem=System
 settings.appearanceSystem=Dopasuj do iOS
 settings.appearanceDark=Ciemny
 settings.appearanceLight=Jasny
@@ -6409,6 +6444,8 @@ settings.preview=Превью
 settings.export=Экспорт
 settings.storage=Хранилище
 settings.about=О приложении
+settings.language=Язык
+settings.languageSystem=Система
 settings.appearanceSystem=Как в iOS
 settings.appearanceDark=Темная
 settings.appearanceLight=Светлая
@@ -6823,6 +6860,8 @@ settings.preview=Önizleme
 settings.export=Dışa aktarma
 settings.storage=Depolama
 settings.about=Hakkında
+settings.language=Dil
+settings.languageSystem=Sistem
 settings.appearanceSystem=iOS ile eşleştir
 settings.appearanceDark=Koyu
 settings.appearanceLight=Açık
@@ -7237,6 +7276,8 @@ settings.preview=Прев’ю
 settings.export=Експорт
 settings.storage=Сховище
 settings.about=Про застосунок
+settings.language=Мова
+settings.languageSystem=Система
 settings.appearanceSystem=Як в iOS
 settings.appearanceDark=Темне
 settings.appearanceLight=Світле
@@ -7651,6 +7692,8 @@ settings.preview=Náhled
 settings.export=Export
 settings.storage=Úložiště
 settings.about=O aplikaci
+settings.language=Jazyk
+settings.languageSystem=Systém
 settings.appearanceSystem=Podle iOS
 settings.appearanceDark=Tmavý
 settings.appearanceLight=Světlý
@@ -8065,6 +8108,8 @@ settings.preview=Previzualizare
 settings.export=Export
 settings.storage=Stocare
 settings.about=Despre
+settings.language=Limbă
+settings.languageSystem=Sistem
 settings.appearanceSystem=Urmează iOS
 settings.appearanceDark=Întunecat
 settings.appearanceLight=Luminos
@@ -8479,6 +8524,8 @@ settings.preview=Előnézet
 settings.export=Export
 settings.storage=Tárhely
 settings.about=Névjegy
+settings.language=Nyelv
+settings.languageSystem=Rendszer
 settings.appearanceSystem=Igazodjon az iOS-hez
 settings.appearanceDark=Sötét
 settings.appearanceLight=Világos
@@ -8893,6 +8940,8 @@ settings.preview=Pratinjau
 settings.export=Ekspor
 settings.storage=Penyimpanan
 settings.about=Tentang
+settings.language=Bahasa
+settings.languageSystem=Sistem
 settings.appearanceSystem=Ikuti iOS
 settings.appearanceDark=Gelap
 settings.appearanceLight=Terang
@@ -9307,6 +9356,8 @@ settings.preview=Pratonton
 settings.export=Eksport
 settings.storage=Penyimpanan
 settings.about=Tentang
+settings.language=Bahasa
+settings.languageSystem=Sistem
 settings.appearanceSystem=Ikut iOS
 settings.appearanceDark=Gelap
 settings.appearanceLight=Cerah
@@ -9721,6 +9772,8 @@ settings.preview=Xem trước
 settings.export=Xuất
 settings.storage=Lưu trữ
 settings.about=Giới thiệu
+settings.language=Ngôn ngữ
+settings.languageSystem=Hệ thống
 settings.appearanceSystem=Theo iOS
 settings.appearanceDark=Tối
 settings.appearanceLight=Sáng
@@ -10215,6 +10268,8 @@ const createStrings = (locale: SupportedLocale) => ({
     export: t(locale, 'settings.export'),
     storage: t(locale, 'settings.storage'),
     about: t(locale, 'settings.about'),
+    language: t(locale, 'settings.language'),
+    languageSystem: t(locale, 'settings.languageSystem'),
     appearanceSystem: t(locale, 'settings.appearanceSystem'),
     appearanceDark: t(locale, 'settings.appearanceDark'),
     appearanceLight: t(locale, 'settings.appearanceLight'),
@@ -10449,5 +10504,48 @@ const createStrings = (locale: SupportedLocale) => ({
   },
 });
 
-export const STRINGS = createStrings(APP_LOCALE);
+const stringsCache = new Map<SupportedLocale, ReturnType<typeof createStrings>>();
+
+export const getStrings = (
+  locale: SupportedLocale = getActiveLocale(),
+): ReturnType<typeof createStrings> => {
+  const cached = stringsCache.get(locale);
+  if (cached) {
+    return cached;
+  }
+
+  const created = createStrings(locale);
+  stringsCache.set(locale, created);
+  return created;
+};
+
+const createDynamicProxy = <T extends object>(resolver: () => T): T =>
+  new Proxy(
+    {},
+    {
+      get(_target, property) {
+        const target = resolver();
+        const value = target[property as keyof T];
+
+        if (typeof value === 'function') {
+          return (...args: unknown[]) =>
+            Reflect.apply(
+              target[property as keyof T] as (...innerArgs: unknown[]) => unknown,
+              target,
+              args,
+            );
+        }
+
+        if (value && typeof value === 'object') {
+          return createDynamicProxy(() => resolver()[property as keyof T] as object) as unknown;
+        }
+
+        return value;
+      },
+    },
+  ) as T;
+
+export const useStrings = (): ReturnType<typeof createStrings> => getStrings(useActiveLocale());
+
+export const STRINGS = createDynamicProxy(() => getStrings());
 export type AppStrings = ReturnType<typeof createStrings>;

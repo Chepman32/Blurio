@@ -16,7 +16,7 @@ import {
   SegmentedControl,
 } from '../components/common';
 import { StageProgressList, SuccessShardConfetti } from '../components/export';
-import { SPACING, STRINGS } from '../constants';
+import { SPACING, useStrings } from '../constants';
 import type {
   ExportPreset,
   ExportRequest,
@@ -41,6 +41,7 @@ import {
 type Props = NativeStackScreenProps<RootStackParamList, 'Export'>;
 
 export const ExportScreen: React.FC<Props> = ({ navigation, route }) => {
+  const STRINGS = useStrings();
   const { colors } = useAppTheme();
   const insets = useSafeAreaInsets();
 
