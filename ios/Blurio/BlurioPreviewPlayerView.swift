@@ -45,6 +45,8 @@ final class BlurioPreviewPlayerView: UIView {
   private var displayLink: CADisplayLink?
   private let ciContext = CIContext()
   private var latestFrameImage: CIImage?
+  private var lastPropRenderTime: CFTimeInterval = 0
+  private static let maxBlurRadius: CGFloat = 25.0
 
   /// Container for blur overlay views, sits on top of the player layer
   private let blurContainer = UIView()
@@ -129,7 +131,11 @@ final class BlurioPreviewPlayerView: UIView {
     reconcileBlurRegions()
     layoutBlurRegions()
     CATransaction.commit()
-    renderBlurRegionsIfPossible()
+    let now = CACurrentMediaTime()
+    if now - lastPropRenderTime >= 0.033 {
+      lastPropRenderTime = now
+      renderBlurRegionsIfPossible()
+    }
   }
 
   private func shouldSkipStaleRenderState(nextPlayheadMs: Double) -> Bool {
@@ -309,30 +315,32 @@ final class BlurioPreviewPlayerView: UIView {
     guard videoRect.width > 1, videoRect.height > 1 else { return }
 
     for track in parsedTracks {
-      guard track.visible,
-            track.values.strength > 0.001,
-            let regionView = blurRegions[track.id],
-            let trackFrame = trackFrames[track.id],
-            let cropRect = sourceCropRect(
-              for: trackFrame,
-              inVideoRect: videoRect,
-              sourceExtent: sourceExtent
-            ) else {
-        continue
+      autoreleasepool {
+        guard track.visible,
+              track.values.strength > 0.001,
+              let regionView = blurRegions[track.id],
+              let trackFrame = trackFrames[track.id],
+              let cropRect = sourceCropRect(
+                for: trackFrame,
+                inVideoRect: videoRect,
+                sourceExtent: sourceExtent
+              ) else {
+          return
+        }
+
+        let cropped = sourceImage.cropped(to: cropRect)
+        let filtered = applyBlurFilter(
+          to: cropped,
+          mode: normalizedBlurMode(track.blendMode),
+          strength: track.values.strength
+        )
+
+        guard let cgImage = ciContext.createCGImage(filtered, from: filtered.extent) else {
+          return
+        }
+
+        regionView.setFilteredImage(cgImage)
       }
-
-      let cropped = sourceImage.cropped(to: cropRect)
-      let filtered = applyBlurFilter(
-        to: cropped,
-        mode: normalizedBlurMode(track.blendMode),
-        strength: track.values.strength
-      )
-
-      guard let cgImage = ciContext.createCGImage(filtered, from: filtered.extent) else {
-        continue
-      }
-
-      regionView.setFilteredImage(cgImage)
     }
   }
 
@@ -383,7 +391,7 @@ final class BlurioPreviewPlayerView: UIView {
 
     switch mode {
     case "bokeh":
-      let bokehRadius = max(baseRadius * 2.5, 2.0)
+      let bokehRadius = min(max(baseRadius * 2.5, 2.0), Self.maxBlurRadius)
       let clamped = image.clampedToExtent()
       if let bokeh = CIFilter(name: "CIBokehBlur") {
         setFilterValue(bokeh, clamped, forKey: kCIInputImageKey)
@@ -394,7 +402,7 @@ final class BlurioPreviewPlayerView: UIView {
         if let bokehOutput = bokeh.outputImage {
           if let bloom = CIFilter(name: "CIBloom") {
             setFilterValue(bloom, bokehOutput, forKey: kCIInputImageKey)
-            setFilterValue(bloom, bokehRadius * 1.2, forKey: kCIInputRadiusKey)
+            setFilterValue(bloom, min(bokehRadius * 1.2, Self.maxBlurRadius), forKey: kCIInputRadiusKey)
             setFilterValue(bloom, 0.25 + clampedStrength * 0.5, forKey: kCIInputIntensityKey)
             if let output = bloom.outputImage {
               return output.cropped(to: extent)
@@ -407,7 +415,7 @@ final class BlurioPreviewPlayerView: UIView {
       let fallbackBlur = applyGaussianBlur(to: image, radius: bokehRadius)
       if let bloom = CIFilter(name: "CIBloom") {
         setFilterValue(bloom, fallbackBlur, forKey: kCIInputImageKey)
-        setFilterValue(bloom, bokehRadius * 1.2, forKey: kCIInputRadiusKey)
+        setFilterValue(bloom, min(bokehRadius * 1.2, Self.maxBlurRadius), forKey: kCIInputRadiusKey)
         setFilterValue(bloom, 0.3 + clampedStrength * 0.5, forKey: kCIInputIntensityKey)
         if let output = bloom.outputImage {
           return output.cropped(to: extent)
@@ -419,7 +427,7 @@ final class BlurioPreviewPlayerView: UIView {
       let clamped = image.clampedToExtent()
       if let motion = CIFilter(name: "CIMotionBlur") {
         setFilterValue(motion, clamped, forKey: kCIInputImageKey)
-        setFilterValue(motion, max(baseRadius * 3.5, 2.0), forKey: kCIInputRadiusKey)
+        setFilterValue(motion, min(max(baseRadius * 3.5, 2.0), Self.maxBlurRadius), forKey: kCIInputRadiusKey)
         setFilterValue(motion, CGFloat.pi * 0.34, forKey: kCIInputAngleKey)
         if let output = motion.outputImage {
           return output.cropped(to: extent)
@@ -466,7 +474,7 @@ final class BlurioPreviewPlayerView: UIView {
         setFilterValue(zoom, clamped, forKey: kCIInputImageKey)
         let center = CIVector(x: extent.midX, y: extent.midY)
         setFilterValue(zoom, center, forKey: kCIInputCenterKey)
-        setFilterValue(zoom, max(baseRadius * 3.5, 2.0), forKey: kCIInputAmountKey)
+        setFilterValue(zoom, min(max(baseRadius * 3.5, 2.0), Self.maxBlurRadius), forKey: kCIInputAmountKey)
         if let output = zoom.outputImage {
           return output.cropped(to: extent)
         }

@@ -38,6 +38,7 @@ export const AnimatedSlider: React.FC<AnimatedSliderProps> = ({
   const progress = useSharedValue(0);
   const context = useSharedValue(0);
   const active = useSharedValue(0);
+  const lastEmitTime = useSharedValue(0);
   const safeValue = Number.isFinite(value) ? clamp(value, min, max) : min;
   const range = max - min;
   const safeRange = range === 0 ? 1 : range;
@@ -76,13 +77,21 @@ export const AnimatedSlider: React.FC<AnimatedSliderProps> = ({
       const delta = event.translationX / trackWidth;
       const next = clamp(context.value + delta, 0, 1);
       progress.value = next;
-      const nextValue = min + range * next;
-      if (Number.isFinite(nextValue)) {
-        runOnJS(onChange)(nextValue);
+      const now = global.performance.now();
+      if (now - lastEmitTime.value >= 32) {
+        lastEmitTime.value = now;
+        const nextValue = min + range * next;
+        if (Number.isFinite(nextValue)) {
+          runOnJS(onChange)(nextValue);
+        }
       }
     })
     .onFinalize(() => {
       active.value = 0;
+      const finalValue = min + range * progress.value;
+      if (Number.isFinite(finalValue)) {
+        runOnJS(onChange)(finalValue);
+      }
       runOnJS(setIsDragging)(false);
       if (onChangeEnd) {
         runOnJS(onChangeEnd)();
