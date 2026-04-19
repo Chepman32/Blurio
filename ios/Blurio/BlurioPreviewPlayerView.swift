@@ -46,7 +46,7 @@ final class BlurioPreviewPlayerView: UIView {
   private let ciContext = CIContext()
   private var latestFrameImage: CIImage?
   private var lastPropRenderTime: CFTimeInterval = 0
-  private static let maxBlurRadius: CGFloat = 25.0
+  private static let maxBlurRadius: CGFloat = 35.0
 
   /// Container for blur overlay views, sits on top of the player layer
   private let blurContainer = UIView()
@@ -386,7 +386,7 @@ final class BlurioPreviewPlayerView: UIView {
     strength: CGFloat
   ) -> CIImage {
     let clampedStrength = min(max(strength, 0), 1)
-    let baseRadius = max(clampedStrength * 16.0, 0.35)
+    let baseRadius = max(clampedStrength * 24.0, 0.35)
     let extent = image.extent
 
     switch mode {

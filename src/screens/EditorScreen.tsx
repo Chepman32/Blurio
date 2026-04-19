@@ -332,7 +332,7 @@ export const EditorScreen: React.FC<Props> = ({ navigation, route }) => {
           </View>
         </View>
 
-        <Animated.View style={[styles.canvasWrap, appearStyle]}>
+        <Animated.View style={[styles.canvasWrap, { aspectRatio: project.video.width / project.video.height }, appearStyle]}>
           <EditorCanvas
             project={project}
             renderState={renderState}
@@ -520,8 +520,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   canvasWrap: {
-    flex: 1,
-    minHeight: 220,
+    width: '100%',
+    maxHeight: '65%',
   },
   strengthCard: {
     borderWidth: 1,

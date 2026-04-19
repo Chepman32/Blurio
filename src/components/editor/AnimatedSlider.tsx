@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { LayoutChangeEvent, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -39,9 +39,15 @@ export const AnimatedSlider: React.FC<AnimatedSliderProps> = ({
   const context = useSharedValue(0);
   const active = useSharedValue(0);
   const lastEmitTime = useSharedValue(0);
+  const dragEnded = useRef(false);
   const safeValue = Number.isFinite(value) ? clamp(value, min, max) : min;
   const range = max - min;
   const safeRange = range === 0 ? 1 : range;
+
+  const handleDragEnd = useCallback(() => {
+    dragEnded.current = true;
+    setIsDragging(false);
+  }, []);
 
   useEffect(() => {
     if (isDragging) {
@@ -49,10 +55,17 @@ export const AnimatedSlider: React.FC<AnimatedSliderProps> = ({
     }
 
     const normalized = clamp((safeValue - min) / safeRange, 0, 1);
-    progress.value = withSpring(normalized, {
-      damping: 15,
-      stiffness: 190,
-    });
+    if (dragEnded.current) {
+      // Drag just ended — set directly to avoid jump, position is already correct
+      dragEnded.current = false;
+      progress.value = normalized;
+    } else {
+      // External value change (undo, reset, etc.) — smooth spring
+      progress.value = withSpring(normalized, {
+        damping: 18,
+        stiffness: 200,
+      });
+    }
   }, [isDragging, min, progress, safeRange, safeValue]);
 
   const onLayout = (event: LayoutChangeEvent) => {
@@ -86,13 +99,22 @@ export const AnimatedSlider: React.FC<AnimatedSliderProps> = ({
         }
       }
     })
-    .onFinalize(() => {
+    .onFinalize(event => {
       active.value = 0;
-      const finalValue = min + range * progress.value;
+      // Subtle velocity-based momentum on release for iOS feel
+      const velocityNorm = trackWidth > 0 ? event.velocityX / trackWidth : 0;
+      const target = clamp(progress.value + velocityNorm * 0.06, 0, 1);
+      progress.value = withSpring(target, {
+        velocity: velocityNorm,
+        damping: 22,
+        stiffness: 280,
+        mass: 0.8,
+      });
+      const finalValue = min + range * target;
       if (Number.isFinite(finalValue)) {
         runOnJS(onChange)(finalValue);
       }
-      runOnJS(setIsDragging)(false);
+      runOnJS(handleDragEnd)();
       if (onChangeEnd) {
         runOnJS(onChangeEnd)();
       }
