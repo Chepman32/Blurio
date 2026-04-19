@@ -44,7 +44,8 @@ platform :ios do
       force: true,
       overwrite_screenshots: true,
       run_precheck_before_submit: false,
-      ignore_language_directory_validation: true
+      ignore_language_directory_validation: true,
+      screenshots_path: "./fastlane/screenshots_staged"
     )
   end
 end
