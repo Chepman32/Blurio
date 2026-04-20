@@ -1,5 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Linking,
+  Platform,
   StyleSheet,
   TouchableOpacity,
   View,
@@ -145,6 +147,14 @@ export const ExportScreen: React.FC<Props> = ({ navigation, route }) => {
     }
   };
 
+  const onViewInGallery = async () => {
+    if (Platform.OS === 'ios') {
+      await Linking.openURL('photos-redirect://');
+    } else if (outputPath) {
+      await Linking.openURL(outputPath);
+    }
+  };
+
   const updatePreset = <T extends keyof ExportPreset>(
     key: T,
     value: ExportPreset[T],
@@ -275,9 +285,27 @@ export const ExportScreen: React.FC<Props> = ({ navigation, route }) => {
         </View>
 
         <BlurButton
-          label={ui.isExporting ? STRINGS.export.cancelButton : STRINGS.export.startButton}
-          onPress={ui.isExporting ? onCancelExport : startPipeline}
-          accessibilityLabel={ui.isExporting ? STRINGS.export.cancelButton : STRINGS.export.startButton}
+          label={
+            ui.isExporting
+              ? STRINGS.export.cancelButton
+              : ui.exportSuccess
+              ? STRINGS.export.viewInGalleryButton
+              : STRINGS.export.startButton
+          }
+          onPress={
+            ui.isExporting
+              ? onCancelExport
+              : ui.exportSuccess
+              ? onViewInGallery
+              : startPipeline
+          }
+          accessibilityLabel={
+            ui.isExporting
+              ? STRINGS.export.cancelButton
+              : ui.exportSuccess
+              ? STRINGS.export.viewInGalleryButton
+              : STRINGS.export.startButton
+          }
           variant={ui.isExporting ? 'danger' : 'primary'}
           style={styles.primaryButton}
         />
