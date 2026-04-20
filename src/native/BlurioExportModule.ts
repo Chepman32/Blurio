@@ -1,4 +1,4 @@
-import { NativeModules } from 'react-native';
+import { NativeEventEmitter, NativeModules } from 'react-native';
 import type {
   BlurioExportModuleInterface,
   ExportErrorEvent,
@@ -30,6 +30,33 @@ const emitError = (event: ExportErrorEvent): void => {
 
 const NativeExportModule =
   NativeModules.BlurioExportModule as BlurioExportModuleInterface | undefined;
+
+// Map native stage strings to ExportStage enum values
+const stageMap: Record<string, ExportStage> = {
+  decoding: ExportStage.DECODING,
+  applyingBlur: ExportStage.APPLYING_BLUR,
+  encoding: ExportStage.ENCODING,
+  saving: ExportStage.SAVING,
+};
+
+if (NativeExportModule) {
+  const nativeEmitter = new NativeEventEmitter(
+    NativeExportModule as unknown as Parameters<typeof NativeEventEmitter>[0],
+  );
+  nativeEmitter.addListener('BlurioExportProgress', (event: { stage: string; progress: number; message: string }) => {
+    emitProgress({
+      stage: stageMap[event.stage] ?? ExportStage.DECODING,
+      progress: event.progress,
+      message: event.message,
+    });
+  });
+  nativeEmitter.addListener('BlurioExportSuccess', (event: { outputUri: string }) => {
+    emitSuccess({ outputUri: event.outputUri });
+  });
+  nativeEmitter.addListener('BlurioExportError', (event: { code: string; message: string }) => {
+    emitError({ code: event.code, message: event.message });
+  });
+}
 
 let cancelRequested = false;
 let activeTimeouts: ReturnType<typeof setTimeout>[] = [];
@@ -118,12 +145,14 @@ const runStubExport = async (request: ExportRequest): Promise<void> => {
 };
 
 export const startExport = async (request: ExportRequest): Promise<void> => {
-  try {
-    if (NativeExportModule?.startExport) {
-      await NativeExportModule.startExport(request);
-      return;
-    }
+  if (NativeExportModule?.startExport) {
+    // Native module emits progress/success/error events itself via NativeEventEmitter.
+    // We just await the promise; errors are already emitted through the event subscription above.
+    await NativeExportModule.startExport(request);
+    return;
+  }
 
+  try {
     await runStubExport(request);
   } catch (error) {
     const message =

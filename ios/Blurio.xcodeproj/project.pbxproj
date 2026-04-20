@@ -15,6 +15,9 @@
 		BF00010120260217000A0001 /* BlurioPreviewViewManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF00010120260217000B0001 /* BlurioPreviewViewManager.swift */; };
 		BF00010120260217000A0002 /* BlurioPreviewViewManager.m in Sources */ = {isa = PBXBuildFile; fileRef = BF00010120260217000B0002 /* BlurioPreviewViewManager.m */; };
 		BF00010120260217000A0003 /* BlurioPreviewPlayerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF00010120260217000B0003 /* BlurioPreviewPlayerView.swift */; };
+		BF00010120260217000A0004 /* Blurio-Bridging-Header.h in Sources */ = {isa = PBXBuildFile; fileRef = BF00010120260217000B0004 /* Blurio-Bridging-Header.h */; };
+		BF00010120260217000A0005 /* BlurioExportModule.m in Sources */ = {isa = PBXBuildFile; fileRef = BF00010120260217000B0005 /* BlurioExportModule.m */; };
+		BF00010120260217000A0006 /* BlurioExportModule.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF00010120260217000B0006 /* BlurioExportModule.swift */; };
 		BF10000120260415000A0001 /* InfoPlist.strings in Resources */ = {isa = PBXBuildFile; fileRef = BF10000120260415000B0001 /* InfoPlist.strings */; };
 		BF10000120260415000A0002 /* Localizable.strings in Resources */ = {isa = PBXBuildFile; fileRef = BF10000120260415000B0002 /* Localizable.strings */; };
 /* End PBXBuildFile section */
@@ -33,6 +36,8 @@
 		BF00010120260217000B0002 /* BlurioPreviewViewManager.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = BlurioPreviewViewManager.m; path = Blurio/BlurioPreviewViewManager.m; sourceTree = "<group>"; };
 		BF00010120260217000B0003 /* BlurioPreviewPlayerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BlurioPreviewPlayerView.swift; path = Blurio/BlurioPreviewPlayerView.swift; sourceTree = "<group>"; };
 		BF00010120260217000B0004 /* Blurio-Bridging-Header.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; name = "Blurio-Bridging-Header.h"; path = "Blurio/Blurio-Bridging-Header.h"; sourceTree = "<group>"; };
+		BF00010120260217000B0005 /* BlurioExportModule.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; name = BlurioExportModule.m; path = Blurio/BlurioExportModule.m; sourceTree = "<group>"; };
+		BF00010120260217000B0006 /* BlurioExportModule.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = BlurioExportModule.swift; path = Blurio/BlurioExportModule.swift; sourceTree = "<group>"; };
 		BF10000120260415000C0001 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = Blurio/en.lproj/InfoPlist.strings; sourceTree = SOURCE_ROOT; };
 		BF10000120260415000C0002 /* ja */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ja; path = Blurio/ja.lproj/InfoPlist.strings; sourceTree = SOURCE_ROOT; };
 		BF10000120260415000C0003 /* ko */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ko; path = Blurio/ko.lproj/InfoPlist.strings; sourceTree = SOURCE_ROOT; };
@@ -64,6 +69,9 @@
 				BF00010120260217000B0001 /* BlurioPreviewViewManager.swift */,
 				BF00010120260217000B0002 /* BlurioPreviewViewManager.m */,
 				BF00010120260217000B0003 /* BlurioPreviewPlayerView.swift */,
+				BF00010120260217000B0004 /* Blurio-Bridging-Header.h */,
+				BF00010120260217000B0005 /* BlurioExportModule.m */,
+				BF00010120260217000B0006 /* BlurioExportModule.swift */,
 				BF00010120260217000B0004 /* Blurio-Bridging-Header.h */,
 				13B07FB61A68108700A75B9A /* Info.plist */,
 				BF10000120260415000B0001 /* InfoPlist.strings */,
@@ -219,13 +227,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Blurio/Pods-Blurio-frameworks-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Embed Pods Frameworks";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Blurio/Pods-Blurio-frameworks-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -262,13 +266,9 @@
 			inputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Blurio/Pods-Blurio-resources-${CONFIGURATION}-input-files.xcfilelist",
 			);
-			inputPaths = (
-			);
 			name = "[CP] Copy Pods Resources";
 			outputFileListPaths = (
 				"${PODS_ROOT}/Target Support Files/Pods-Blurio/Pods-Blurio-resources-${CONFIGURATION}-output-files.xcfilelist",
-			);
-			outputPaths = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
@@ -286,6 +286,9 @@
 				BF00010120260217000A0001 /* BlurioPreviewViewManager.swift in Sources */,
 				BF00010120260217000A0002 /* BlurioPreviewViewManager.m in Sources */,
 				BF00010120260217000A0003 /* BlurioPreviewPlayerView.swift in Sources */,
+				BF00010120260217000A0004 /* Blurio-Bridging-Header.h in Sources */,
+				BF00010120260217000A0005 /* BlurioExportModule.m in Sources */,
+				BF00010120260217000A0006 /* BlurioExportModule.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
