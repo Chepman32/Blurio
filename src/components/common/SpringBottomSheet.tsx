@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Dimensions, Pressable, StyleSheet, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Animated, {
@@ -45,8 +45,22 @@ export const SpringBottomSheet: React.FC<SpringBottomSheetProps> = ({
   const collapsedTranslate = windowHeight - collapsedHeight;
   const translateY = useSharedValue(collapsedTranslate);
   const contextTranslate = useSharedValue(collapsedTranslate);
+  const skipNextAnimation = useRef(false);
+
+  const handleExpandedChange = useCallback(
+    (nextExpanded: boolean) => {
+      skipNextAnimation.current = true;
+      onExpandedChange(nextExpanded);
+    },
+    [onExpandedChange],
+  );
 
   useEffect(() => {
+    if (skipNextAnimation.current) {
+      skipNextAnimation.current = false;
+      return;
+    }
+
     const target = expanded ? minTranslate : collapsedTranslate;
     translateY.value = withSpring(target, {
       damping: 18,
@@ -98,7 +112,7 @@ export const SpringBottomSheet: React.FC<SpringBottomSheetProps> = ({
         velocity: event.velocityY,
       });
 
-      runOnJS(onExpandedChange)(isExpanded);
+      runOnJS(handleExpandedChange)(isExpanded);
     });
 
   const animatedStyle = useAnimatedStyle(() => ({
