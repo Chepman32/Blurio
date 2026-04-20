@@ -118,6 +118,7 @@ interface BlurioStore {
   cancelExport: () => void;
   completeExport: () => void;
   failExport: (message: string) => void;
+  resetExport: () => void;
   setLowStorageWarningVisible: (visible: boolean) => void;
   setHdrWarningVisible: (visible: boolean) => void;
   setAssetUnavailablePromptVisible: (visible: boolean) => void;
@@ -1875,6 +1876,19 @@ export const useEditorStore = create<BlurioStore>((set, get) => ({
         isExporting: false,
         exportStage: ExportStage.FAILED,
         exportMessage: message,
+      },
+    }));
+  },
+
+  resetExport: () => {
+    set(state => ({
+      ui: {
+        ...state.ui,
+        isExporting: false,
+        exportProgress: 0,
+        exportStage: ExportStage.IDLE,
+        exportMessage: '',
+        exportSuccess: false,
       },
     }));
   },

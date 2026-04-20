@@ -57,6 +57,7 @@ export const ExportScreen: React.FC<Props> = ({ navigation, route }) => {
   const completeExportState = useEditorStore(state => state.completeExport);
   const cancelExportState = useEditorStore(state => state.cancelExport);
   const failExport = useEditorStore(state => state.failExport);
+  const resetExportState = useEditorStore(state => state.resetExport);
   const setLowStorageWarningVisible = useEditorStore(
     state => state.setLowStorageWarningVisible,
   );
@@ -313,7 +314,10 @@ export const ExportScreen: React.FC<Props> = ({ navigation, route }) => {
         {ui.exportSuccess ? (
           <BlurButton
             label={STRINGS.common.done}
-            onPress={() => navigation.goBack()}
+            onPress={() => {
+              resetExportState();
+              navigation.goBack();
+            }}
             accessibilityLabel={STRINGS.common.done}
             variant="secondary"
           />
