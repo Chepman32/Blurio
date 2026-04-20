@@ -1,5 +1,5 @@
 import React from 'react';
-import { StyleSheet, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, View } from 'react-native';
 import { Check, Dot } from 'lucide-react-native';
 import { ExportStage } from '../../types';
 import { SPACING, STRINGS } from '../../constants';
@@ -42,8 +42,10 @@ export const StageProgressList: React.FC<StageProgressListProps> = ({ stage }) =
           <View key={entry} style={styles.row}>
             {done ? (
               <Check size={16} color={colors.success} />
+            ) : active ? (
+              <ActivityIndicator size={16} color={colors.accent} />
             ) : (
-              <Dot size={16} color={active ? colors.accent : colors.textMuted} />
+              <Dot size={16} color={colors.textMuted} />
             )}
             <AppText
               variant="micro"
