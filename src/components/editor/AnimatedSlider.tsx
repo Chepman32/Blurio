@@ -49,6 +49,8 @@ export const AnimatedSlider: React.FC<AnimatedSliderProps> = ({
     setIsDragging(false);
   }, []);
 
+  const hasMounted = useRef(false);
+
   useEffect(() => {
     if (isDragging) {
       return;
@@ -59,6 +61,10 @@ export const AnimatedSlider: React.FC<AnimatedSliderProps> = ({
       // Drag just ended — set directly to avoid jump, position is already correct
       dragEnded.current = false;
       progress.value = normalized;
+    } else if (!hasMounted.current) {
+      // First mount — set directly to avoid initial bounce
+      progress.value = normalized;
+      hasMounted.current = true;
     } else {
       // External value change (undo, reset, etc.) — smooth spring
       progress.value = withSpring(normalized, {
