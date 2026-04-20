@@ -186,7 +186,8 @@ export const HomeScreen: React.FC<Props> = ({ navigation }) => {
       const next = { ...previous };
       sectionDescriptors.forEach(section => {
         if (next[section.key] === undefined) {
-          next[section.key] = true;
+          // Auto-expand everything except Trash on first appearance
+          next[section.key] = section.type !== 'trash';
           changed = true;
         }
       });
